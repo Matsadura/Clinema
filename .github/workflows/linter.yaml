@@ -1,0 +1,38 @@
+name: Lint
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    branches: [main, master, dev]
+    paths:
+      - '**.py'
+
+permissions: {}
+
+jobs:
+  build:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List changed Python files
+        run: |
+          git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$' || echo "No Python files changed"
+
+      - name: Super-linter
+        uses: super-linter/super-linter@v7.1.0
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_PYTHON_FLAKE8: true
+          FILTER_REGEX_INCLUDE: .*\.py$
