@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: flask.dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./api:/movie_name/api
