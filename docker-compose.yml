@@ -23,7 +23,8 @@ services:
       - /movie_name/client/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-
+    stdin_open: true
+    tty: true
 
   mysql:
     image: mysql:8.0
