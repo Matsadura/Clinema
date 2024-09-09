@@ -1,11 +1,43 @@
-version: '3'
+version: '3.8'
 
 services:
   api:
     build:
       context: .
-      dockerfile: flask.dockerfile
+      dockerfile: server/flask.dockerfile
     ports:
       - "5000:5000"
     volumes:
-      - ./api:/movie_name/api
+      - ./server:/movie_name/server
+    depends_on:
+      - mysql
+
+  client:
+    build:
+      context: .
+      dockerfile: client/vite.dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/movie_name/client
+      - /movie_name/client/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: CINEMA_DB
+      MYSQL_USER: CINEMA_USER
+      MYSQL_PASSWORD: CINEMA_PASSWORD
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

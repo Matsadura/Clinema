@@ -8,4 +8,4 @@ RUN pip3 install flask==2.1.0 werkzeug==2.1.1 flask-cors==4.0.1 sqlalchemy==1.4.
 
 EXPOSE 5000
 
-CMD ["python3", "-m", "api.app"]
+CMD ["python3", "-m", "server.api.app"]
