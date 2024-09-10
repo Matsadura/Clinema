@@ -8,7 +8,13 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./server:/movie_name/server
+      - .:/movie_name
+    environment:
+      MOVIE_DB_HOST: mysql_db
+      MOVIE_DB_USER: CINEMA_USER
+      MOVIE_DB_PASSWORD: CINEMA_PASSWORD
+      MOVIE_DB_NAME: CINEMA_DB
+      PYTHONPATH: /movie_name
     depends_on:
       - mysql
 
@@ -36,7 +42,7 @@ services:
       MYSQL_USER: CINEMA_USER
       MYSQL_PASSWORD: CINEMA_PASSWORD
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
 
