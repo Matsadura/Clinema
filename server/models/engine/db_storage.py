@@ -4,14 +4,14 @@ Contains the class DBStorage
 """
 
 from models.base_model import BaseModel, Base
-from models.mood import Mood
-from models.recommendation import Recommendation
+from models.movie import Movie
+from models.user_movie import User_Movie
 from models.user import User
 from os import getenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-classes = {"Mood": Mood, "Recommendation": Recommendation, "User": User}
+classes = {"Movie": Movie, "User_Movie": User_Movie, "User": User}
 
 
 class DBStorage:
