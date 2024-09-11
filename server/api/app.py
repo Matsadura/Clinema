@@ -13,6 +13,7 @@ app.url_map.strict_slashes = False
 app.register_blueprint(app_views)
 HOST = "0.0.0.0"
 PORT = 5000
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 
 @app.route('/volumes')

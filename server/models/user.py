@@ -13,10 +13,10 @@ class User(BaseModel, Base):
     password = Column(String(128), nullable=False)
     first_name = Column(String(128), nullable=False)
     last_name = Column(String(128), nullable=False)
-    recent_mood = Column(String(24), nullable=False)
-    recommendations = relationship("Recommendation",
-                                   back_populates="user",
-                                   cascade="all, delete-orphan")
+    avatar = Column(String(256), nullable=True)
+    user_movies = relationship("User_Movie",
+                               back_populates="user",
+                               cascade="all, delete-orphan")
 
     def __init__(self, *args, **kwargs):
         """Initializes user"""

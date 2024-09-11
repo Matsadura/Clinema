@@ -13,11 +13,11 @@ def status():
 def stats():
     """Return the count of all classes"""
     from models.user import User
-    from models.mood import Mood
-    from models.recommendation import Recommendation
+    from models.movie import Movie
+    from models.user_movie import User_Movie
     from models import storage
 
     return {"Users": storage.count(User),
-            "Moods": storage.count(Mood),
-            "Recommendations": storage.count(Recommendation)
+            "Movies": storage.count(Movie),
+            "User_Movies": storage.count(User_Movie)
             }
