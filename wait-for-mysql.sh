@@ -1,3 +1,3 @@
 #!/bin/sh
-sleep 10
+sleep 5
 exec "$@"
