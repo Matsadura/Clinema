@@ -14,7 +14,7 @@ from datetime import timedelta
 load_dotenv()
 app = Flask(__name__)
 jwt.init_app(app)
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"*": {"origins": "*"}})
 app.url_map.strict_slashes = False
 app.register_blueprint(app_views)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
@@ -22,44 +22,7 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 HOST = "0.0.0.0"
 PORT = 5000
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
-
-
-# Weather route to be moved to api.views.weather
-def get_weather(lat, lon):
-    base_url = "https://api.openweathermap.org/data/2.5/weather"
-    params = {
-        'lat': lat,
-        'lon': lon,
-        'appid': OPENWEATHER_API_KEY,
-        'units': 'metric'
-    }
-
-    response = requests.get(base_url, params=params)
-
-    if response.status_code == 200:
-        print(response.json)
-        return response.json()  # Return the weather data as JSON
-    else:
-        return None  # Return None if the request failed
-
-
-# Weather route to be moved to api.views.weather
-@app.route('/weather', methods=['GET'])
-def weather():
-    lat = request.args.get('lat')
-    lon = request.args.get('lon')
-
-    print(f'Latitude: {lat}, Longitude: {lon}')
-
-    if not lat or not lon:
-        return jsonify({'error': 'Missing latitude or longitude'}), 400
-
-    weather_data = get_weather(lat, lon)
-
-    if weather_data:
-        return jsonify(weather_data)
-    else:
-        return jsonify({'error': 'Failed to fetch weather data'}), 500
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 # To be removed att deployement
