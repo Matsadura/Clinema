@@ -51,10 +51,6 @@ def handle_user_id(user_id):
             return jsonify({"error": "No data provided"}), 400
 
         if user_id == current_id:
-            data = request.get_json()
-            if not data:
-                return jsonify({"error": "No data provided"}), 400
-
             valid_attributes = ['first_name', 'last_name']
             for k, v in data.items():
                 if k in valid_attributes:
