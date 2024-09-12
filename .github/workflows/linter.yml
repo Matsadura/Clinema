@@ -1,38 +1,28 @@
-name: Lint
+name: Python Style Check
 
-on: # yamllint disable-line rule:truthy
+on:
   pull_request:
-    branches: [origin/main, master, dev]
     paths:
       - '**.py'
 
-permissions: {}
-
 jobs:
-  build:
-    name: Lint
+  style_check:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: read
-      statuses: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
         with:
-          fetch-depth: 0
+          files: |
+            **/*.py
 
-      - name: List changed Python files
+      - name: Run pycodestyle on changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$' || echo "No Python files changed"
-
-      - name: Super-linter
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: origin/main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_PYTHON_FLAKE8: true
-          FILTER_REGEX_INCLUDE: .*\.py$
+          pip install pycodestyle
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            pycodestyle "$file"
+          done
