@@ -3,7 +3,7 @@
 Contains the class DBStorage
 """
 
-from models.base_model import BaseModel, Base
+from models.base_model import Base
 from models.movie import Movie
 from models.user_movie import User_Movie
 from models.user import User
@@ -69,11 +69,12 @@ class DBStorage:
     def get(self, cls, id):
         """Returns the object based on the class and its ID,
             or None if not found"""
-        objs = self.all(cls).values()
-        for obj in objs:
-            if obj.id == id:
-                return obj
-        return None
+        return self.__session.query(cls).filter(getattr(cls, 'id') == id)
+
+    def get_specific(self, cls, attribute, value):
+        """Retun the object based on the class, attrubite and value"""
+        return self.__session.query(cls).filter(
+            getattr(cls, attribute) == value).first()
 
     def count(self, cls=None):
         """

@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
 """ Starts the Flask web app """
 import os
-
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from models import storage
 from api.views import app_views
+from api.views.auth import jwt
 from flask_cors import CORS
+from datetime import timedelta
 
 
 load_dotenv()
 app = Flask(__name__)
+jwt.init_app(app)
 CORS(app)
 app.url_map.strict_slashes = False
 app.register_blueprint(app_views)
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 HOST = "0.0.0.0"
 PORT = 5000
-SECRET_KEY = os.getenv('SECRET_KEY')
-
-
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
 
 
+# Weather route to be moved to api.views.weather
 def get_weather(lat, lon):
     base_url = "https://api.openweathermap.org/data/2.5/weather"
     params = {
@@ -41,6 +43,7 @@ def get_weather(lat, lon):
         return None  # Return None if the request failed
 
 
+# Weather route to be moved to api.views.weather
 @app.route('/weather', methods=['GET'])
 def weather():
     lat = request.args.get('lat')
@@ -59,6 +62,7 @@ def weather():
         return jsonify({'error': 'Failed to fetch weather data'}), 500
 
 
+# To be removed att deployement
 @app.route('/volumes')
 def volume():
     """ A dummy route to test volumes of docker"""
