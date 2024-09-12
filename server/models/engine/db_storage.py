@@ -69,7 +69,7 @@ class DBStorage:
     def get(self, cls, id):
         """Returns the object based on the class and its ID,
             or None if not found"""
-        return self.__session.query(cls).filter(id=id).first()
+        return self.__session.query(cls).filter(getattr(cls, 'id') == id)
 
     def get_specific(self, cls, attribute, value):
         """Retun the object based on the class, attrubite and value"""

@@ -23,3 +23,12 @@ class User(BaseModel, Base):
         kwargs["password"] = hashlib.sha256(
             kwargs["password"].encode()).hexdigest()
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def verify_password(plain_password, hashed_password):
+        """Verify password"""
+        plain_password_hash = hashlib.sha256(
+            plain_password.encode()).hexdigest()
+        if plain_password_hash == hashed_password:
+            return True
+        return False
