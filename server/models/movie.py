@@ -8,7 +8,9 @@ from sqlalchemy.orm import relationship
 class Movie(BaseModel, Base):
     """Representation of a user """
     __tablename__ = 'movies'
-    movie = Column(String(60), nullable=False)
+    name = Column(String(60), nullable=False)
+    description = Column(String(512), nullable=True)
+    poster = Column(String(512), nullable=True)
     user_movies = relationship("User_Movie",
                                back_populates="movie",
                                cascade="all, delete-orphan")
