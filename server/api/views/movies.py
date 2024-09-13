@@ -13,7 +13,7 @@ from models.movie import Movie
 def movies():
     """Get all movies"""
     if request.method == 'GET':
-        movies = storage.all(Movie)
+        movies = storage.all_list(Movie)
         return jsonify([movie.to_dict() for movie in movies])
 
     if request.method == 'POST':
