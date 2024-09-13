@@ -18,17 +18,6 @@ const LocationComponent = () => {
                     console.error("Error fetching weather data:", err);
                     setError("Error fetching weather data");
                 });
-            axios.post('http://localhost:5000/api/movies_by_weather', {
-                latitude: latitude,
-                longitude: longitude
-            })
-                .then(response => {
-                    console.log("Movies based on weather:", response.data);
-                })
-                .catch(err => {
-                    console.error("Error fetching movie data:", err);
-                    setError("Error fetching movie data");
-                });
         }
     }, [latitude, longitude]);  // Use location in the effect
 
