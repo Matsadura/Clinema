@@ -5,10 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Moods = () => {
     const [selectedMoods, setSelectedMoods] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const navigateToRoute = (route, args) => {
-        const navigate = useNavigate();
-        navigate(route, { state: args });
-    };
+    const navigate = useNavigate();
 
     const moods = [
         { name: "Joyful", emoji: "😊" },
@@ -53,7 +50,7 @@ const Moods = () => {
             const apiUrl = process.env.REACT_APP_API_URL;
             const response = await axios.post(`${apiUrl}/movies_by_mood`, { mood: selectedMoods });
             const suggestions = response.data.suggestions;
-            navigateToRoute('/allMovies', {suggestions});
+            navigate('/AllMovies', {state: { suggestions }});
             console.log('Movie suggestions:', suggestions);
 
         } catch (error) {
