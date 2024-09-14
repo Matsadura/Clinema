@@ -148,7 +148,7 @@ def seen_or_liked(user_id):
     if not data['user_id'] or not data['movie_id']:
         return jsonify({'error': 'Missing required user_id or movie_id'}), 400
 
-    if not data['seen'] or not data['like']:
+    if data['seen'] is None and data['like'] is None:
         return jsonify({'error': 'Missing required seen or like boolean'}), 400
 
     existing_user = storage.get(User, data['user_id'])
