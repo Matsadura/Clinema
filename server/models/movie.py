@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """Holds class Movie"""
 from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean, Integer, Float
 from sqlalchemy.orm import relationship
 
 
 class Movie(BaseModel, Base):
     """Representation of a user """
     __tablename__ = 'movies'
-    name = Column(String(60), nullable=False)
+    name = Column(String(128), nullable=False)
     description = Column(String(512), nullable=True)
     poster = Column(String(512), nullable=True)
+    adult = Column(Boolean, nullable=True)
+    popularity = Column(Float, nullable=True)
+    year = Column(Integer, nullable=True)
+    rating = Column(Float, nullable=True)
     user_movies = relationship("User_Movie",
                                back_populates="movie",
                                cascade="all, delete-orphan")
