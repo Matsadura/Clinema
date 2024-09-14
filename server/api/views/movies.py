@@ -24,12 +24,12 @@ Attributes:
 """
 from api.views import app_views
 from flask import jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from models import storage
 from models.movie import Movie
 
 
-@app_views.get('/movies')
+@app_views.route('/movies', methods=['GET'])
 def movies():
     """Get all movies"""
     movies = storage.all_list(Movie)
@@ -38,11 +38,12 @@ def movies():
     return jsonify([movie.to_dict() for movie in movies])
 
 
-@app_views.post('/movies')
-@jwt_required
+# @jwt_required
+@app_views.route('/movies', methods=['POST'])
 def post_movies():
+    verify_jwt_in_request()
     try:
-        get_jwt_identity()
+        current_user = get_jwt_identity()
     except Exception as e:
         return jsonify({"error": "Invalid token"}), 401
 
