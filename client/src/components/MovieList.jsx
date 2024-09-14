@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import axios from 'axios';
 import useLocation from '../tools/useLocation.js';
+import {useNavigate} from "react-router-dom";
 
 const MovieList = () => {
     const { latitude, longitude, error: locationError } = useLocation();
@@ -8,6 +9,8 @@ const MovieList = () => {
     const [detailedMovies, setDetailedMovies] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // const navigate = useNavigate();
+
 
     // Fetch movie data based on weather location
     useEffect(() => {
@@ -23,6 +26,7 @@ const MovieList = () => {
 
                     if (response.data && Array.isArray(response.data.suggestions)) {
                         setMovies(response.data.suggestions);
+                        // navigate('/AllMovies', {state: { suggestions }});
                         fetchDetailedMovies(response.data.suggestions);
                     } else {
                         throw new Error("Unexpected response structure");
