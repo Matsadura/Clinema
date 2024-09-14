@@ -3,25 +3,25 @@
 user_movies related routes
 
 This module contains routes for managing user-movie relationships, including
-seen and liked movies. These routes require JWT authentication
+save and liked movies. These routes require JWT authentication
 for access control.
 
 Routes:
     - /<user_id>/user_movies:
         - GET: Retrieve all user-movie relationships for a specific user.
 
-    - /<user_id>/seen:
-        - GET: Retrieve all seen movies for a specific user.
+    - /<user_id>/save:
+        - GET: Retrieve all save movies for a specific user.
 
     - /<user_id>/liked:
         - GET: Retrieve all liked movies for a specific user.
 
-    - /<user_id>/seen:
+    - /<user_id>/save:
     - /<user_id>/liked:
-        - POST: Add a new liked or seen movie for a specific user.
+        - POST: Add a new liked or save movie for a specific user.
 
     - /<user_id>/liked/<user_movie_id>:
-    - /<user_id>/seen/<user_movie_id>:
+    - /<user_id>/save/<user_movie_id>:
         - DELETE: Delete a specific user-movie relationship.
         - PUT: Update a specific user-movie relationship.
 
@@ -73,9 +73,9 @@ def user_movies(user_id):
     return jsonify([um.to_dict() for um in all_um])
 
 
-@app_views.get('/<user_id>/seen')
+@app_views.get('/<user_id>/save')
 @jwt_required()
-def seen_movies(user_id):
+def save_movies(user_id):
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -90,11 +90,11 @@ def seen_movies(user_id):
         return jsonify({'error': 'Unauthorized to access this data'}), 403
 
     all_user_movies = storage.all(User_Movie).values()
-    seen_movies = [
+    save_movies = [
         um.movie.to_dict() for um in all_user_movies
-        if um.user_id == current_id and um.seen
+        if um.user_id == current_id and um.save
     ]
-    return jsonify(seen_movies)
+    return jsonify(save_movies)
 
 
 @app_views.get('/<user_id>/liked')
@@ -123,10 +123,10 @@ def liked_movies(user_id):
 
 
 # TO ADD - Check if an object already exists with same request json data
-@app_views.post('/<user_id>/seen')
+@app_views.post('/<user_id>/save')
 @app_views.post('/<user_id>/liked')
 @jwt_required()
-def seen_or_liked(user_id):
+def save_or_liked(user_id):
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -153,8 +153,8 @@ def seen_or_liked(user_id):
     if existing_user_movie:
         return jsonify({'error': 'User Movie relation already exists'}), 409
 
-    if data['seen'] is None and data['like'] is None:
-        return jsonify({'error': 'Missing required seen or like boolean'}), 400
+    if data['save'] is None and data['like'] is None:
+        return jsonify({'error': 'Missing required save or like boolean'}), 400
 
     existing_user = storage.get(User, data['user_id'])
     if not existing_user:
@@ -164,7 +164,7 @@ def seen_or_liked(user_id):
     if not existing_movie:
         return jsonify({'error': 'Movie does not exist'}), 404
 
-    valid_attribute = ['user_id', 'movie_id', 'seen', 'like']
+    valid_attribute = ['user_id', 'movie_id', 'save', 'like']
     new_like = {}
     for k, v in data.items():
         if k in valid_attribute:
@@ -178,7 +178,7 @@ def seen_or_liked(user_id):
 
 
 @app_views.route('/<user_id>/liked/<user_movie_id>', methods=['DELETE', 'PUT'])
-@app_views.route('/<user_id>/seen/<user_movie_id>', methods=['DELETE', 'PUT'])
+@app_views.route('/<user_id>/save/<user_movie_id>', methods=['DELETE', 'PUT'])
 @jwt_required()
 def user_movie_id(user_id, user_movie_id):
     try:
@@ -213,7 +213,7 @@ def user_movie_id(user_id, user_movie_id):
         if not current_user_movie:
             return jsonify({"error": "User_movie not found"}), 404
 
-        valid_attributes = ['seen', 'like']
+        valid_attributes = ['save', 'like']
         for k, v in data.items():
             if k in valid_attributes:
                 setattr(current_user_movie, k, v)

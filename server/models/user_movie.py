@@ -14,7 +14,7 @@ class User_Movie(BaseModel, Base):
     movie_id = Column(String(128),
                       ForeignKey('movies.id', ondelete='CASCADE'),
                       nullable=False)
-    seen = Column(Boolean, nullable=True)
+    save = Column(Boolean, nullable=True)
     like = Column(Boolean, nullable=True)
     movie = relationship("Movie", back_populates="user_movies")
     user = relationship("User", back_populates="user_movies",)

@@ -35,15 +35,15 @@ echo -e "\nMovie ID 2: $MOVIE_ID_2\n"
 echo -e "\nMovie ID 3: $MOVIE_ID_3\n"
 
 # Like a movie
-USER_MOVIE_1=$(http  POST $API/$USER_ID/liked/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_1 seen:=true)
+USER_MOVIE_1=$(http  POST $API/$USER_ID/liked/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_1 save:=true)
 
 echo -e "\n USER_MOVIE_1: $USER_MOVIE_1\n"
-# Make movie as seen
-USER_MOVIE_2=$(http  POST $API/$USER_ID/seen/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_2 seen:=true)
+# Make movie as save
+USER_MOVIE_2=$(http  POST $API/$USER_ID/save/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_2 save:=true)
 
 echo -e "\n USER_MOVIE_2: $USER_MOVIE_2\n"
 
-# Seen and likes same movie
-USER_MOVIE_3=$(http  POST $API/$USER_ID/seen/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_3 seen:=true like:=true)
+# save and likes same movie
+USER_MOVIE_3=$(http  POST $API/$USER_ID/save/ Authorization:"Bearer $TOKEN" user_id=$USER_ID movie_id=$MOVIE_ID_3 save:=true like:=true)
 
 echo -e "\n USER_MOVIE_3: $USER_MOVIE_3\n"
