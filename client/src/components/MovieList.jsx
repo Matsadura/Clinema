@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import axios from 'axios';
 import useLocation from '../tools/useLocation.js';
+import {useNavigate} from "react-router-dom";
 
 const MovieList = () => {
     const { latitude, longitude, error: locationError } = useLocation();
@@ -8,6 +9,8 @@ const MovieList = () => {
     const [detailedMovies, setDetailedMovies] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // const navigate = useNavigate();
+
 
     // Fetch movie data based on weather location
     useEffect(() => {
@@ -23,6 +26,7 @@ const MovieList = () => {
 
                     if (response.data && Array.isArray(response.data.suggestions)) {
                         setMovies(response.data.suggestions);
+                        // navigate('/AllMovies', {state: { suggestions }});
                         fetchDetailedMovies(response.data.suggestions);
                     } else {
                         throw new Error("Unexpected response structure");
@@ -86,14 +90,14 @@ const MovieList = () => {
             </div>
             {!loading && !error && (
                 <div
-                    className="flex overflow-x-auto space-x-6"
+                    className="flex overflow-hidden space-x-6"
                 >
                     {movies.map((movie, index) => (
                         detailedMovies[movie] ? (
 
                             <div
                                 key={index}
-                                className={`w-[250px]  shrink-0 bg-white overflow-hidden rounded-3xl shadow-lg animate-infinite-scroll hover:animate-pause`}
+                                className={`w-[250px]  shrink-0 bg-white overflow-hidden rounded-3xl shadow-lg  animate-infinite-scroll hover:animate-pause`}
                             >
                                     <img
                                         src={`https://image.tmdb.org/t/p/w500${detailedMovies[movie].poster_path}`}
