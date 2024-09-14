@@ -3,6 +3,7 @@ import HeroSection from "../components/HeroSection.jsx";
 import LocationComponent from "../components/LocationComponent.jsx";
 import MovieList from "../components/MovieList.jsx";
 import Moods from "../components/moods.jsx";
+import MovieCard from "../components/MovieCard.jsx";
 
 const HomePage = () => {
     return (
@@ -12,6 +13,7 @@ const HomePage = () => {
             <LocationComponent />
             <MovieList/>
             <Moods/>
+            {/*<MovieCard/>*/}
         </div>
     )
 }

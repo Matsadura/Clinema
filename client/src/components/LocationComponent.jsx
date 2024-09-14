@@ -34,7 +34,7 @@ const LocationComponent = () => {
         }
     }, [latitude, longitude]);
 
-    const isDaytime = currentTime.getHours() >= 6 && currentTime.getHours() < 18; // Adjust sunrise/sunset times if needed
+    const isDaytime = currentTime.getHours() >= 6 && currentTime.getHours() < 20; // Adjust sunrise/sunset times if needed
 
     return (
         <div

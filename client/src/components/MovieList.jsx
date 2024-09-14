@@ -86,14 +86,14 @@ const MovieList = () => {
             </div>
             {!loading && !error && (
                 <div
-                    className="flex overflow-x-auto space-x-6"
+                    className="flex overflow-hidden space-x-6"
                 >
                     {movies.map((movie, index) => (
                         detailedMovies[movie] ? (
 
                             <div
                                 key={index}
-                                className={`w-[250px]  shrink-0 bg-white overflow-hidden rounded-3xl shadow-lg animate-infinite-scroll hover:animate-pause`}
+                                className={`w-[250px]  shrink-0 bg-white overflow-hidden rounded-3xl shadow-lg  animate-infinite-scroll hover:animate-pause`}
                             >
                                     <img
                                         src={`https://image.tmdb.org/t/p/w500${detailedMovies[movie].poster_path}`}
