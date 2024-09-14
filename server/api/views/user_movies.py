@@ -148,6 +148,11 @@ def seen_or_liked(user_id):
     if not data['user_id'] or not data['movie_id']:
         return jsonify({'error': 'Missing required user_id or movie_id'}), 400
 
+    existing_user_movie = storage.get_specific_double(
+        User_Movie, 'user_id', user_id, 'movie_id', data['movie_id'])
+    if existing_user_movie:
+        return jsonify({'error': 'User Movie relation already exists'}), 409
+
     if data['seen'] is None and data['like'] is None:
         return jsonify({'error': 'Missing required seen or like boolean'}), 400
 
