@@ -59,7 +59,8 @@ def post_movies():
     if existing_movie:
         return jsonify({'error': 'Movie name already exists'}), 400
 
-    valid_attributes = ['name', 'description', 'poster']
+    valid_attributes = ['name', 'description', 'poster', 'adult',
+                        'year', 'rating', 'popularity']
     movie_parsed = {}
     for k, v in movie_data.items():
         if k in valid_attributes:
