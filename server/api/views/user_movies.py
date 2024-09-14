@@ -1,8 +1,48 @@
 #!/usr/bin/python3
 """
 user_movies related routes
+
+This module contains routes for managing user-movie relationships, including
+seen and liked movies. These routes require JWT authentication
+for access control.
+
+Routes:
+    - /<user_id>/user_movies:
+        - GET: Retrieve all user-movie relationships for a specific user.
+
+    - /<user_id>/seen:
+        - GET: Retrieve all seen movies for a specific user.
+
+    - /<user_id>/liked:
+        - GET: Retrieve all liked movies for a specific user.
+
+    - /<user_id>/seen:
+    - /<user_id>/liked:
+        - POST: Add a new liked or seen movie for a specific user.
+
+    - /<user_id>/liked/<user_movie_id>:
+    - /<user_id>/seen/<user_movie_id>:
+        - DELETE: Delete a specific user-movie relationship.
+        - PUT: Update a specific user-movie relationship.
+
+Attributes:
+    - User_Movie: Class representing the relationship between
+        a user and a movie.
+    - storage: Object for interacting with the database storage.
+
+Exceptions:
+    - Invalid token: Raised when the JWT token is invalid.
+    - User not found: Raised when the user is not found in the database.
+    - Unauthorized: Raised when the user is not authorized to access
+        or modify the data.
+    - Invalid data: Raised when the request data is invalid or missing.
+
+Returns:
+    - JSON response containing the user-movie relationship data
+        or appropriate error messages.
 """
 from api.views import app_views
+from datetime import datetime
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import storage
@@ -82,6 +122,7 @@ def liked_movies(user_id):
         return jsonify(liked_movies)
 
 
+# TO ADD - Check if an object already exists with same request json data
 @app_views.post('/<user_id>/seen')
 @app_views.post('/<user_id>/liked')
 @jwt_required()
@@ -146,7 +187,7 @@ def user_movie_id(user_id, user_movie_id):
     current_id = current_user_profile.id
 
     if current_id != user_id:
-        return jsonify({'error': 'Unauthorized to delete this data'}), 403
+        return jsonify({'error': 'Unauthorized to DEL OR PUT this data'}), 403
 
     if request.method == 'DELETE':
         um = storage.get_specific(User_Movie, 'id', user_movie_id)
@@ -155,3 +196,22 @@ def user_movie_id(user_id, user_movie_id):
         storage.delete(um)
         storage.save()
         return jsonify({})
+
+    if request.method == 'PUT':
+        try:
+            data = request.get_json()
+        except Exception as e:
+            return jsonify({"error": "No data provided"}), 400
+
+        current_user_movie = storage.get_specific(
+            User_Movie, 'id', user_movie_id)
+        if not current_user_movie:
+            return jsonify({"error": "User_movie not found"}), 404
+
+        valid_attributes = ['seen', 'like']
+        for k, v in data.items():
+            if k in valid_attributes:
+                setattr(current_user_movie, k, v)
+        setattr(current_user_movie, 'updated_at', datetime.utcnow())
+        storage.save()
+        return jsonify(current_user_movie.to_dict()), 200

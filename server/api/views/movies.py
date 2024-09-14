@@ -1,6 +1,26 @@
 #!/usr/bin/python3
 """
-Movies related routes
+Module containing routes for managing movies in the application.
+
+This module provides routes for retrieving and creating movies.
+It also includes error handling for various scenarios
+related to movie operations.
+
+Routes:
+    - GET /movies: Retrieve all movies.
+    - POST /movies: Create a new movie.
+
+Exceptions:
+    - Invalid token: Raised when the JWT token is invalid.
+    - Invalid Request: Raised when the request is invalid.
+    - Movie name is required: Raised when the movie name
+        is missing in the request.
+    - Movie name already exists: Raised when a movie
+        with the same name already exists in the database.
+
+Attributes:
+    - storage: Object for interacting with the database storage.
+    - Movie: Class representing a movie entity in the database.
 """
 from api.views import app_views
 from flask import jsonify, request
