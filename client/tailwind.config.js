@@ -10,6 +10,7 @@ export default {
       colors: {
         primary: '#369a31', // green
         secondary: {
+          lighter: '#5271ff', // blue-lighter
           light: '#373944', // blue-light
           DEFAULT: '#2b2c36', // blue
           dark: '#23232c', // blue-dark
