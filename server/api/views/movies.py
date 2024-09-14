@@ -38,11 +38,10 @@ def movies():
     return jsonify([movie.to_dict() for movie in movies])
 
 
-# @jwt_required
 @app_views.route('/movies', methods=['POST'])
 def post_movies():
-    verify_jwt_in_request()
     try:
+        verify_jwt_in_request()
         current_user = get_jwt_identity()
     except Exception as e:
         return jsonify({"error": "Invalid token"}), 401
