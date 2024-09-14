@@ -9,7 +9,14 @@ from api.app import GROQ_API_KEY
 
 
 def suggest_movie(mood=None, weather=None):
-    """ Suggest a movie based on mood and/or weather """
+    """
+    - Suggests a movie based on the provided mood and/or weather.
+    - Parameters:
+        - mood (str): The mood keyword for suggesting a movie.
+        - weather (str): The weather information for suggesting a movie.
+    - Returns:
+        - A list of suggested movies based on the mood and/or weather.
+    """
 
     client = Groq(api_key=GROQ_API_KEY)
 
@@ -49,7 +56,6 @@ def suggest_movie(mood=None, weather=None):
     )
 
     response_content = completion.choices[0].message.content
-    # Ensure the response is a valid JSON array
     try:
         suggestions = eval(response_content)
         if isinstance(suggestions, list):
@@ -60,9 +66,9 @@ def suggest_movie(mood=None, weather=None):
         return []
 
 
-# Route to get movie suggestions based on mood and weather
 @app_views.route('/movies_by_mood_and_weather', methods=['POST'])
 def movie_suggestion_mood_weather():
+    """Get movie suggestions based on mood and weather"""
     data = request.get_json()
     mood = data.get('mood')
     latitude = data.get('latitude')
@@ -72,18 +78,16 @@ def movie_suggestion_mood_weather():
         return jsonify({"error": "Mood, latitude, and \
                         longitude are required"}), 400
 
-    # Get weather data
     weather = get_weather(latitude, longitude)
 
-    # Suggest movies based on mood and weather
     suggestions = suggest_movie(mood, weather)
 
-    return jsonify({"suggestions": suggestions})
+    return jsonify({"suggestions": suggestions}), 201
 
 
-# Route to get movie suggestions based on mood only
 @app_views.route('/movies_by_mood', methods=['POST'])
 def movie_suggestion_mood_only():
+    """Get movie suggestions based on mood only"""
     data = request.get_json()
     mood = data.get('mood')
 
@@ -92,12 +96,12 @@ def movie_suggestion_mood_only():
 
     # Suggest movies based on mood only
     suggestions = suggest_movie(mood=mood)
-    return jsonify({"suggestions": suggestions})
+    return jsonify({"suggestions": suggestions}), 201
 
 
-# Route to get movie suggestions based on weather only
 @app_views.route('/movies_by_weather', methods=['POST'])
 def movie_suggestion_weather_only():
+    """Get movie suggestions based on weather only"""
     data = request.get_json()
     latitude = data.get('latitude')
     longitude = data.get('longitude')
@@ -105,10 +109,8 @@ def movie_suggestion_weather_only():
     if not latitude or not longitude:
         return jsonify({"error": "Latitude and longitude are required"}), 400
 
-    # Get weather data
     weather = get_weather(latitude, longitude)
 
-    # Suggest movies based on weather only
     suggestions = suggest_movie(weather=weather)
-    # suggestions = suggest_movie(weather="rain")
+
     return jsonify({"suggestions": suggestions})

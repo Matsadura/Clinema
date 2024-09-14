@@ -96,6 +96,12 @@ class DBStorage:
         return self.__session.query(cls).filter(
             getattr(cls, attribute) == value).first()
 
+    def get_specific_double(self, cls, attr_1, val_1, attr_2, val_2):
+        """Retun the object based on the class, and multiple attributes"""
+        return self.__session.query(cls).filter(
+            getattr(cls, attr_1) == val_1,
+            getattr(cls, attr_2) == val_2).first()
+
     def count(self, cls=None):
         """
         Returns the number of objects in storage matching the given class.
