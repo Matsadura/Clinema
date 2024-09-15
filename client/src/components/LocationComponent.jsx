@@ -25,7 +25,6 @@ const LocationComponent = () => {
             axios.get(`http://localhost:5000/api/weather?lat=${latitude}&lon=${longitude}`)
                 .then(response => {
                     setWeatherData(response.data);
-                    console.log("Weather data:", response.data);
                 })
                 .catch(err => {
                     console.error("Error fetching weather data:", err);
