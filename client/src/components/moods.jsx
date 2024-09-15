@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import useLocation from "../tools/useLocation.js";
 
 const Moods = () => {
+    const { latitude, longitude, error: locationError } = useLocation();
     const [selectedMoods, setSelectedMoods] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [loadingCombined, setLoadingCombined] = useState(false);
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     const moods = [
@@ -51,10 +55,34 @@ const Moods = () => {
             const response = await axios.post(`${apiUrl}/movies_by_mood`, { mood: selectedMoods });
             const suggestions = response.data.suggestions;
             navigate('/AllMovies', {state: { suggestions }});
-            console.log('Movie suggestions:', suggestions);
 
         } catch (error) {
             console.error('Error fetching movie suggestions:', error);
+        }
+    };
+
+    const handleWeatherAndMoodClick = async () => {
+        try {
+            setLoadingCombined(true);
+            if (latitude && longitude) {
+                const apiUrl = process.env.REACT_APP_API_URL;
+                const response = await axios.post(`${apiUrl}/movies_by_mood_and_weather`, {
+                    mood: selectedMoods,
+                    latitude,
+                    longitude,
+                });
+
+                if (response.data && Array.isArray(response.data.suggestions)) {
+                    const suggestions = response.data.suggestions;
+                    navigate('/AllMovies', {state: { suggestions }});
+                } else {
+                    throw new Error("Unexpected response structure");
+                }
+            }
+        } catch (err) {
+            setError("Error fetching movie data");
+        } finally {
+            setLoadingCombined(false);
         }
     };
 
@@ -70,7 +98,7 @@ const Moods = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <div className="flex flex-col items-center w-2/3 m-auto ">
+            <div className="flex flex-col mt-4 items-center w-2/3 m-auto ">
                 <div className="flex flex-wrap gap-4 justify-center">
                     {filteredMoods.map((mood) => (
                         <button
@@ -86,6 +114,14 @@ const Moods = () => {
                     ))}
                 </div>
                 <div className="my-6 flex justify-center space-x-4">
+
+                        <button
+                            className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-700 transition-all duration-500"
+                            onClick={handleWeatherAndMoodClick}
+                        >
+                            Movies by Mood & Weather
+                        </button>
+
                     <button
                         className="px-6 py-2 bg-white text-black rounded-md hover:bg-primary hover:text-secondary transition-all duration-500"
                         onClick={handleSubmit}
