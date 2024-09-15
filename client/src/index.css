@@ -3,5 +3,43 @@
 @tailwind utilities;
 
 body {
-  background: #373944;
+  background: #2b2c36;
 }
+
+.infinite-scroll:hover {
+  @apply animate-pause;
+}
+
+.animate-pause {
+  animation-play-state: paused;
+}
+
+.see-all-button:hover .see-all-icon {
+  transform: translateX(4px); /* Adjust arrow movement on hover */
+}
+
+.mood-button {
+  /* Existing styles from your code */
+  background-color: var(--mood-bg-color, transparent); /* Default transparent background */
+  color: var(--mood-text-color, inherit); /* Default text color */
+  padding-left: 24px; /* Adjust padding to accommodate icons (optional) */
+  position: relative; /* For icon positioning (optional) */
+}
+
+.mood-button.happy {
+  background-color: yellow;
+}
+
+.mood-button.sad {
+  background-color: blue;
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scroll{
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
