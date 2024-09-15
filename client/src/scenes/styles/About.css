@@ -1,0 +1,18 @@
+.about__card {
+	box-sizing: border-box;
+	border: 2px solid #369a31;
+	box-shadow: 12px 17px 51px rgba(0, 0, 0, 0.22);
+	backdrop-filter: blur(6px);
+	cursor: pointer;
+	transition: all 0.5s;
+	user-select: none;
+}
+
+.about__card:hover {
+	border: 1px solid white;
+	transform: scale(1.04);
+}
+
+.about__card:active {
+	transform: scale(0.92) rotateZ(1.7deg);
+}
