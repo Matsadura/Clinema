@@ -16,10 +16,7 @@ createRoot(document.getElementById("root")).render(
           path="/"
           element={<PrivateRoute open={true} element={HomePage} />}
         />
-        <Route
-          path="/AllMovies"
-          element={<PrivateRoute open={true} element={AllMoviesPage} />}
-        />
+        <Route path="/AllMovies" element={<AllMoviesPage />} />
         <Route path="auth" element={<AuthPage />} />
       </Routes>
     </Router>
