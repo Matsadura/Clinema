@@ -6,6 +6,7 @@ import AllMoviesPage from "./scenes/AllMoviesPage.jsx";
 import { ContextProvider } from "./components/Context.jsx";
 import { PrivateRoute } from "./components/PrivateRoute.jsx";
 import AuthPage from "./scenes/AuthPage.jsx";
+import About from "./scenes/About.jsx";
 
 createRoot(document.getElementById("root")).render(
   // <App />
@@ -16,11 +17,9 @@ createRoot(document.getElementById("root")).render(
           path="/"
           element={<PrivateRoute open={true} element={HomePage} />}
         />
-        <Route
-          path="/AllMovies"
-          element={<PrivateRoute open={true} element={AllMoviesPage} />}
-        />
-        <Route path="auth" element={<AuthPage />} />
+        <Route path="/AllMovies" element={<AllMoviesPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/about" element={<About />} />
       </Routes>
     </Router>
   </ContextProvider>
