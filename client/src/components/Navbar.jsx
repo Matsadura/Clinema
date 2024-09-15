@@ -1,56 +1,71 @@
-import {useState} from "react";
+import { useContext, useState } from "react";
 import { CiBookmark } from "react-icons/ci";
 import { FaUserCircle } from "react-icons/fa";
 import clinema from "../images/Clinema.png"; // Adjust this depending on the location of Navbar.jsx
-
-
+import { DataContext } from "./Context";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
-    const [activeLink, setActiveLink] = useState("Home");
+  const [activeLink, setActiveLink] = useState("Home");
+  const { user } = useContext(DataContext);
+  const navigate = useNavigate();
 
-    const handleClick = (link) => {
-        setActiveLink(link);
-    }
+  const handleClick = (link) => {
+    setActiveLink(link);
+  };
 
-    return (
-        <nav className="bg-secondary-dark p-4 flex justify-between items-center shadow-white shadow-b-xl">
-            {/* Left side - Logo */}
-            <div className="text-white text-lg font-bold">
-                <img
-                    src={clinema}
-                    alt="Clinema"
-                    className="w-32 h-auto"
-                />
+  return (
+    <nav className="bg-secondary-dark p-4 flex justify-between items-center shadow-white shadow-b-xl">
+      {/* Left side - Logo */}
+      <div className="text-white text-lg font-bold">
+        <img src={clinema} alt="Clinema" className="w-32 h-auto" />
+      </div>
+      <div className="flex space-x-4 items-center">
+        <a
+          href="#"
+          onClick={() => handleClick("Home")}
+          className={`text-gray-300 hover:text-white ${
+            activeLink === "Home" ? "text-white" : ""
+          }`}
+        >
+          Home
+        </a>
+        <a
+          href="/about"
+          onClick={() => handleClick("About us")}
+          className={`text-gray-300 hover:text-white ${
+            activeLink === "About us" ? "text-white" : ""
+          }`}
+        >
+          About us
+        </a>
+      </div>
+      {/*Right side - Home*/}
+      <div className="flex space-x-4 items-center text-white">
+        {/*<div className="relative p-2 hover:bg-secondary-light rounded-full">*/}
+        {/*    <CiHome className="text-2xl text-green-400"/>*/}
+        {/*</div>*/}
+        {user ? (
+          <>
+            <div className="p-2 hover:bg-secondary-light rounded-full">
+              <CiBookmark className="text-2xl" />
             </div>
-            <div className="flex space-x-4 items-center">
-                <a href="#"
-                   onClick={() => handleClick("Home")}
-                   className={`text-gray-300 hover:text-white ${activeLink === "Home" ? "text-white" : ""}`}
-                >
-                    Home
-                </a>
-                <a
-                    href="/about"
-                    onClick={() => handleClick("About us")}
-                    className={`text-gray-300 hover:text-white ${activeLink === "About us" ? "text-white" : ""}`}
-                >
-                    About us
-                </a>
+            <div className="p-2 hover:bg-secondary-light rounded-full">
+              <FaUserCircle className="text-2xl" />
             </div>
-            {/*Right side - Home*/}
-            <div className="flex space-x-4 items-center text-white">
-                {/*<div className="relative p-2 hover:bg-secondary-light rounded-full">*/}
-                {/*    <CiHome className="text-2xl text-green-400"/>*/}
-                {/*</div>*/}
-                <div className="p-2 hover:bg-secondary-light rounded-full">
-                    <CiBookmark className="text-2xl"/>
-                </div>
-                <div className="p-2 hover:bg-secondary-light rounded-full">
-                    <FaUserCircle className="text-2xl"/>
-                </div>
-            </div>
-        </nav>
-    );
+          </>
+        ) : (
+          <button
+            onClick={() => navigate("/auth")}
+            className="p-2 hover:bg-secondary-light rounded-full
+          font-bold w-20 bg-indigo-700 text-black"
+          >
+            login
+          </button>
+        )}
+      </div>
+    </nav>
+  );
 };
 
 export default Navbar;
