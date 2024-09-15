@@ -1,17 +1,15 @@
 import { createContext, useState } from "react";
 import React from "react";
 
-export const DataConext = createContext();
+export const DataContext = createContext();
 
 export const ContextProvider = ({ children }) => {
-  const [auth, setData] = useState({
-    isAuthenticated: false,
-    user: null,
-  });
+  const [isAuthenticated, setAuth] = useState(false);
+  const [user, setUser] = useState(null);
 
   return (
-    <DataConext.Provider value={{ auth, setData }}>
+    <DataContext.Provider value={{ setAuth, setUser, isAuthenticated, user }}>
       {children}
-    </DataConext.Provider>
+    </DataContext.Provider>
   );
 };
