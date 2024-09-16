@@ -1,7 +1,7 @@
 # Clinema
 
 
-![image](https://github.com/Matsadura/Clinema/blob/more-doc/client/src/images/brand-logo-dark.svg)
+![image](https://github.com/Matsadura/Clinema/blob/dev/client/src/images/brand-logo-dark.svg)
 
 ## Overview
 
