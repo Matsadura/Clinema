@@ -8,16 +8,17 @@ from sqlalchemy.orm import relationship
 class Movie(BaseModel, Base):
     """Representation of a user """
     __tablename__ = 'movies'
+    tmdb_id = Column(Integer, nullable=False)
     name = Column(String(128), nullable=False)
-    description = Column(String(512), nullable=True)
+    description = Column(String(2024), nullable=True)
     poster = Column(String(512), nullable=True)
     adult = Column(Boolean, nullable=True)
     popularity = Column(Float, nullable=True)
     year = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
-    user_movies = relationship("User_Movie",
-                               back_populates="movie",
-                               cascade="all, delete-orphan")
+    # user_movies = relationship("User_Movie",
+    #                            back_populates="movie",
+    #                            cascade="all, delete-orphan")
 
     def __init__(self, *args, **kwargs):
         """Initializes user"""

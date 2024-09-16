@@ -11,12 +11,13 @@ class User_Movie(BaseModel, Base):
     user_id = Column(String(128),
                      ForeignKey('users.id', ondelete='CASCADE'),
                      nullable=False)
-    movie_id = Column(String(128),
-                      ForeignKey('movies.id', ondelete='CASCADE'),
-                      nullable=False)
+    # movie_id = Column(String(128),
+    #                   ForeignKey('movies.id', ondelete='CASCADE'),
+    #                   nullable=False)
+    movie_id = Column(String(128), nullable=False)
     save = Column(Boolean, nullable=True)
     like = Column(Boolean, nullable=True)
-    movie = relationship("Movie", back_populates="user_movies")
+    # movie = relationship("Movie", back_populates="user_movies")
     user = relationship("User", back_populates="user_movies",)
 
     def __init__(self, *args, **kwargs):

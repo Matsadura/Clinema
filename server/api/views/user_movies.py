@@ -54,6 +54,10 @@ from models.user_movie import User_Movie
 @app_views.get('/<user_id>/user_movies')
 @jwt_required()
 def user_movies(user_id):
+    """
+    GET
+        - Header: Authorization Bearer Token (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -76,6 +80,10 @@ def user_movies(user_id):
 @app_views.get('/<user_id>/save')
 @jwt_required()
 def save_movies(user_id):
+    """
+    GET
+        - Header: Authorization Bearer Token (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -127,6 +135,16 @@ def liked_movies(user_id):
 @app_views.post('/<user_id>/liked')
 @jwt_required()
 def save_or_liked(user_id):
+    """
+    POST
+        - Header: Authorization Bearer Token (required)
+    Input:
+        - movie_id: Integer (required)
+        - user_id: String (required)
+        - save: Boolean
+        - like: Boolean
+        Only one of save or like is required
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -153,7 +171,9 @@ def save_or_liked(user_id):
     if existing_user_movie:
         return jsonify({'error': 'User Movie relation already exists'}), 409
 
-    if data['save'] is None and data['like'] is None:
+    save = data.get('save')
+    like = data.get('like')
+    if save is None and like is None:
         return jsonify({'error': 'Missing required save or like boolean'}), 400
 
     existing_user = storage.get(User, data['user_id'])
@@ -195,6 +215,10 @@ def user_movie_id(user_id, user_movie_id):
         return jsonify({'error': 'Unauthorized to DEL OR PUT this data'}), 403
 
     if request.method == 'DELETE':
+        """
+        DELETE
+            - Header: Authorization Bearer Token (required)
+        """
         um = storage.get_specific(User_Movie, 'id', user_movie_id)
         if not um:
             return jsonify({'error': 'User_movie is not found'}), 404
@@ -203,6 +227,14 @@ def user_movie_id(user_id, user_movie_id):
         return jsonify({})
 
     if request.method == 'PUT':
+        """
+        PUT
+            - Header: Authorization Bearer Token (required)
+        Input:
+            - save: Boolean
+            - like: Boolean
+            Only one of these two is required
+        """
         try:
             data = request.get_json()
         except Exception as e:

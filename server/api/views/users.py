@@ -40,7 +40,11 @@ from models.user import User
 @app_views.route('/users/profile', methods=['GET'])
 @jwt_required()
 def get_user_profile():
-    """Get user profile"""
+    """Get user profile
+
+    GET
+        - Header: Authorization Bearer Token (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -55,7 +59,15 @@ def get_user_profile():
 @app_views.route('/users/<user_id>/profile', methods=['DELETE', 'PUT'])
 @jwt_required()
 def handle_user_id(user_id):
-    """Handle user_id related requests"""
+    """
+    Handle user_id related requests
+
+    POST
+        - Header: Authorization Bearer Token (required)
+    Input:
+        first_name: String (required)
+        last_name: String (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:

@@ -40,6 +40,19 @@ def movies():
 
 @app_views.route('/movies', methods=['POST'])
 def post_movies():
+    """
+    POST
+        - Header: Authorization Bearer Token (required)
+    Input:
+        - name: String (required)
+        - tmdb_id: Integer (required)
+        - description: String
+        - Poster: String
+        - adult: Boolean
+        - popularity: Float
+        - year: Integer
+        - rating: Float
+    """
     try:
         verify_jwt_in_request()
         current_user = get_jwt_identity()
@@ -57,10 +70,10 @@ def post_movies():
 
     existing_movie = storage.get_specific(Movie, 'name', name)
     if existing_movie:
-        return jsonify({'error': 'Movie name already exists'}), 400
+        return jsonify({'error': 'Movie name already exists'}), 409
 
     valid_attributes = ['name', 'description', 'poster', 'adult',
-                        'year', 'rating', 'popularity']
+                        'year', 'rating', 'popularity', 'tmdb_id']
     movie_parsed = {}
     for k, v in movie_data.items():
         if k in valid_attributes:
