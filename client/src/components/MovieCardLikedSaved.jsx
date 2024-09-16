@@ -7,7 +7,7 @@ import axios from 'axios';
 import { MdPeopleAlt } from "react-icons/md";
 
 
-export default function MovieCard({userId, movie_id, title, poster, year, rate, popularity, trailer, language, description }) {
+export default function MovieCard({userId, movie_id, title, poster, year, rating, popularity, trailer, language, description }) {
     const [liked, setLiked] = useState(false)
     const [save, setSave] = useState(false);
 
@@ -144,7 +144,7 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
                     <div className='text-4xl text-yellow-400'>
                         <TiStarFullOutline />
                     </div>
-                    <span className='text-2xl font-bold relative top-[4px]'>{rate || 0.0}</span>
+                    <span className='text-2xl font-bold relative top-[4px]'>{rating || 0.0}</span>
                 </div>
                 {/* Description section */}
                 <div className='mt-5'>
