@@ -5,12 +5,15 @@
 
 ## Overview
 
-Clinema is a cinema management application that allows users to manage movie listings, bookings, and user accounts. The application is built using a microservices architecture, with separate services for the API, client, and database. The API is developed using Flask, while the client is built with Vite and Tailwind CSS for a modern user interface. The application uses MySQL as the database to store all relevant data.
+Clinema is a web application that suggests personalized movie recommendations based on the user's mood, the current weather, or a combination of both. By leveraging AI and real-time weather data, it provides a unique and tailored cinematic experience. Perfect for anyone seeking the right movie for any emotional state or weather condition. The API is developed using Flask, while the client is built with Vite and Tailwind CSS for a modern user interface. The application uses MySQL as the database to store all relevant data.
 
 ## Features
 - User authentication and authorization
 - Movie listing and details
-- Booking management
+- Movie listing based on the user's current weather
+- Movie listing based on the user's selected mood(s)
+- Movie listing based on a combination of the user's selected moods and current weather
+- Like and save suggestions
 - Responsive design for mobile and desktop
 
 ## Getting Started
@@ -32,12 +35,17 @@ Clinema utilizes a modern tech stack to ensure efficient development and a seaml
 - Flask
 - MySQL
 
+## External APIs Used
+- [OpenWeatherMap](https://openweathermap.org/api)
+- [TMDB](https://developer.themoviedb.org/docs/getting-started)
+- [Groq](https://groq.com/)
+
 ## Installation
 To install and run Clinema, follow these steps:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Matsadura/movie_name.git
+   git clone https://github.com/Matsadura/Clinema.git
    cd clinema
    ```
 
@@ -47,6 +55,12 @@ To install and run Clinema, follow these steps:
 3. **Build and run the services**:
    ```bash
    docker-compose up --build
+   ```
+   - At first setup Docker will set up MySQL which will cause flask to not recognise it, when that happens 
+
+   ```bash
+   docker-compose down
+   docker-compose up
    ```
 
 4. **Access the application**:
