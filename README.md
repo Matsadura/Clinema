@@ -1,6 +1,8 @@
 # Clinema
 
 
+![image](https://github.com/user-attachments/assets/3d9f59ae-7301-4103-8a8c-f8dec5719b61)
+
 ## Overview
 
 Clinema is a cinema management application that allows users to manage movie listings, bookings, and user accounts. The application is built using a microservices architecture, with separate services for the API, client, and database. The API is developed using Flask, while the client is built with Vite and Tailwind CSS for a modern user interface. The application uses MySQL as the database to store all relevant data.
