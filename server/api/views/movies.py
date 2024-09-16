@@ -44,7 +44,7 @@ def post_movies():
     POST
         - Header: Authorization Bearer Token (required)
     Input:
-        - name: String (required)
+        - title: String (required)
         - tmdb_id: Integer (required)
         - description: String
         - Poster: String
@@ -52,6 +52,7 @@ def post_movies():
         - popularity: Float
         - year: Integer
         - rating: Float
+        - language: String
     """
     try:
         verify_jwt_in_request()
@@ -64,16 +65,16 @@ def post_movies():
     except Exception as e:
         return jsonify({'error': 'Invalid Request'}), 400
 
-    name = movie_data.get('name')
-    if not name:
+    title = movie_data.get('title')
+    if not title:
         return jsonify({'error': 'Movie name is required'}), 400
 
-    existing_movie = storage.get_specific(Movie, 'name', name)
+    existing_movie = storage.get_specific(Movie, 'title', title)
     if existing_movie:
         return jsonify({'error': 'Movie name already exists'}), 409
 
-    valid_attributes = ['name', 'description', 'poster', 'adult',
-                        'year', 'rating', 'popularity', 'tmdb_id']
+    valid_attributes = ['title', 'description', 'poster', 'adult',
+                        'year', 'rating', 'popularity', 'tmdb_id', 'language']
     movie_parsed = {}
     for k, v in movie_data.items():
         if k in valid_attributes:
@@ -83,3 +84,12 @@ def post_movies():
     storage.new(new_movie)
     storage.save()
     return jsonify(new_movie.to_dict()), 201
+
+
+@app_views.route('/movies/<movie_id>', methods=['GET'])
+def get_movie(movie_id):
+    """Get specific movie"""
+    movie = storage.get_specific(Movie, 'tmdb_id', movie_id)
+    if not movie:
+        return jsonify({'error': 'Movie not found'}), 404
+    return jsonify(movie.to_dict())
