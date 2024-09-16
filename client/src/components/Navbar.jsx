@@ -6,15 +6,17 @@ import { useContext, useState } from 'react';
 import './styles/NavBar.css';
 import { DataContext } from "./Context";
 import { useNavigate } from "react-router-dom";
+import ProfilePage from '../scenes/UserProfile';
 
 function Navbar() {
   const [mobileNavOpen, setMobileNav] = useState(false);
+
+
   const { user } = useContext(DataContext);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const navigate = useNavigate();
 
   const handlePopoverToggle = () => {
-    console.log(user);
     setIsPopoverOpen(!isPopoverOpen);
   };
   const handleLogout = () => {
@@ -78,14 +80,13 @@ function Navbar() {
                   <img src={avatarUserImg} className='ml-6 md:ml-0 rounded-full w-12 border-2 border-primary' alt="avatar of the user" />
                 </button>
                 <div
-                  className={`absolute z-20 text-secondary-dark left-0 mt-2 bg-white  rounded-lg shadow-md w-48 ${isPopoverOpen ? 'slide-down-animation' : 'slide-up-animation'}`}
+                  className={`absolute z-20 text-secondary-dark right-0 mt-2 bg-white  rounded-lg shadow-md w-48 ${isPopoverOpen ? 'slide-down-animation' : 'slide-up-animation'}`}
                 >
                   <ul className="list-none p-2">
                     <li
                       className="hover:bg-gray-300 p-2 rounded-md cursor-pointer"
-                      onClick={handleProfileClick}
                     >
-                      <button>Profile</button>
+                      <a href="/users/profile" className='w-full block'>Profile</a>
                     </li>
                     <li
                       className="hover:bg-gray-300 p-2 rounded-md cursor-pointer"
@@ -113,27 +114,29 @@ function Navbar() {
         </div>
 
         {/* movile nav */}
-        {mobileNavOpen ?
-          <div className='border-t-4 border-secondary-dark bg-secondary-light flex flex-col items-start p-5'>
-            {user ? <div className="md:hidden flex justify-end text-sm lg:text-lg items-center gap-2 mr-8">
-              <div>
-                <img src={avatarUserImg} className='md:ml-0 rounded-full w-12 border-2 border-primary' alt="avatar of the user" />
-              </div>
-              <span className='font-bold border-b-2 border-primary pb-1 text-center px-2'>{`Hello ${user.first_name}!`}</span>
-            </div> : null}
-            <nav>
-              <div className="md:hidden text-lg flex gap-3 flex-col items-start justify-start p-4">
-                <a className="font-medium text-white cursor-pointer hover:text-primary pointer" onClick={handleProfileClick}>Profile</a>
-                <button className="font-medium text-white hover:text-primary">Weather</button>
-                <button className="font-medium text-white hover:text-primary">Mood</button>
-                <a onClick={handleSavedMoviesClick} className="font-medium cursor-pointer text-white hover:text-primary">Saved</a>
-                <a onClick={handleLikedMoviesClick} className="font-medium cursor-pointer text-white hover:text-primary">Liked</a>
-                <button onClick={handleLogout} className="font-medium text-white hover:text-primary" >Log Out</button>
-              </div>
-            </nav>
-          </div> : null}
-      </div>
-    </div>
+        {
+          mobileNavOpen ?
+            <div className='border-t-4 border-secondary-dark bg-secondary-light flex flex-col items-start p-5'>
+              {user ? <div className="md:hidden flex justify-end text-sm lg:text-lg items-center gap-2 mr-8">
+                <div>
+                  <img src={avatarUserImg} className='md:ml-0 rounded-full w-12 border-2 border-primary' alt="avatar of the user" />
+                </div>
+                <span className='font-bold border-b-2 border-primary pb-1 text-center px-2'>{`Hello ${user.first_name}!`}</span>
+              </div> : null}
+              <nav>
+                <div className="md:hidden text-lg flex gap-3 flex-col items-start justify-start p-4">
+                  <a className="font-medium text-white cursor-pointer hover:text-primary pointer" onClick={handleProfileClick}>Profile</a>
+                  <button className="font-medium text-white hover:text-primary">Weather</button>
+                  <button className="font-medium text-white hover:text-primary">Mood</button>
+                  <a onClick={handleSavedMoviesClick} className="font-medium cursor-pointer text-white hover:text-primary">Saved</a>
+                  <a onClick={handleLikedMoviesClick} className="font-medium cursor-pointer text-white hover:text-primary">Liked</a>
+                  <button onClick={handleLogout} className="font-medium text-white hover:text-primary" >Log Out</button>
+                </div>
+              </nav>
+            </div> : null
+        }
+      </div >
+    </div >
   )
 }
 
