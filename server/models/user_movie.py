@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Holds class User_Movie"""
 from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
 
@@ -14,7 +14,7 @@ class User_Movie(BaseModel, Base):
     # movie_id = Column(String(128),
     #                   ForeignKey('movies.id', ondelete='CASCADE'),
     #                   nullable=False)
-    movie_id = Column(String(128), nullable=False)
+    movie_id = Column(Integer, nullable=False)
     save = Column(Boolean, nullable=True)
     like = Column(Boolean, nullable=True)
     # movie = relationship("Movie", back_populates="user_movies")
