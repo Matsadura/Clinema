@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import MovieCard from '../components/MovieCardLikedSaved.jsx';
+import Navbar from '../components/Navbar.jsx';
 
 const LikedMoviesPage = ({ userId }) => {
     const [likedMovies, setLikedMovies] = useState([]);
@@ -45,8 +46,9 @@ const LikedMoviesPage = ({ userId }) => {
 
     return (
         <div className="liked-movies-page">
-            <h2>Liked Movies</h2>
-            <div className="movie-list">
+            <Navbar />
+            <div className="movie-list flex  flex-col items-center gap-12 pb-20">
+                <h2 className='text-4xl font-bold text-white mt-14 mb-6'>Liked Movies</h2>
                 {likedMovies.length > 0 ? (
                     likedMovies.map(movie => (
                         <MovieCard key={movie.movie_id} {...movie} />

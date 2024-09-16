@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import MovieCard from '../components/MovieCardLikedSaved.jsx';
+import Navbar from '../components/Navbar.jsx';
 
 const SavedMoviesPage = ({ userId }) => {
     const [savedMovies, setSavedMovies] = useState([]);
@@ -18,7 +19,7 @@ const SavedMoviesPage = ({ userId }) => {
                         Authorization: `Bearer ${token}`,
                     }
                 });
-                
+
                 // Fetch movie details for each saved movie
                 const movieDetailsPromises = response.data.map(async (movie) => {
                     const movieResponse = await axios.get(`${apiUrl}/movies/${movie.movie_id}`, {
@@ -28,7 +29,7 @@ const SavedMoviesPage = ({ userId }) => {
                     });
                     return movieResponse.data;
                 });
-                
+
                 const movieDetails = await Promise.all(movieDetailsPromises);
                 setSavedMovies(movieDetails);
                 setLoading(false);
@@ -45,8 +46,9 @@ const SavedMoviesPage = ({ userId }) => {
 
     return (
         <div className="saved-movies-page">
-            <h2>Saved Movies</h2>
-            <div className="movie-list flex-col gap-5 flex">
+            <Navbar />
+            <div className="movie-list flex-col gap-10 flex items-center">
+                <h2 className='text-4xl font-bold text-white mt-14 mb-6'>Saved Movies</h2>
                 {savedMovies.length > 0 ? (
                     savedMovies.map(movie => (
                         <MovieCard key={movie.movie_id} {...movie} />
