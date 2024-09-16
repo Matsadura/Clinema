@@ -124,7 +124,7 @@ def liked_movies(user_id):
     if request.method == 'GET':  # Get liked movies
         all_user_movies = storage.all(User_Movie).values()
         liked_movies = [
-            um.movie.to_dict() for um in all_user_movies
+            um.to_dict() for um in all_user_movies
             if um.user_id == current_id and um.like
         ]
         return jsonify(liked_movies)
