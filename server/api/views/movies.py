@@ -9,7 +9,6 @@ related to movie operations.
 Routes:
     - GET /movies: Retrieve all movies.
     - POST /movies: Create a new movie.
-    - GET /movies/<movie_id>: Retrieve a specific movie
 
 Exceptions:
     - Invalid token: Raised when the JWT token is invalid.
@@ -45,7 +44,7 @@ def post_movies():
     POST
         - Header: Authorization Bearer Token (required)
     Input:
-        - name: String (required)
+        - title: String (required)
         - tmdb_id: Integer (required)
         - description: String
         - Poster: String
@@ -53,6 +52,7 @@ def post_movies():
         - popularity: Float
         - year: Integer
         - rating: Float
+        - language: String
     """
     try:
         verify_jwt_in_request()
@@ -65,16 +65,16 @@ def post_movies():
     except Exception as e:
         return jsonify({'error': 'Invalid Request'}), 400
 
-    name = movie_data.get('name')
-    if not name:
+    title = movie_data.get('title')
+    if not title:
         return jsonify({'error': 'Movie name is required'}), 400
 
-    existing_movie = storage.get_specific(Movie, 'name', name)
+    existing_movie = storage.get_specific(Movie, 'title', title)
     if existing_movie:
         return jsonify({'error': 'Movie name already exists'}), 409
 
-    valid_attributes = ['name', 'description', 'poster', 'adult',
-                        'year', 'rating', 'popularity', 'tmdb_id']
+    valid_attributes = ['title', 'description', 'poster', 'adult',
+                        'year', 'rating', 'popularity', 'tmdb_id', 'language']
     movie_parsed = {}
     for k, v in movie_data.items():
         if k in valid_attributes:
