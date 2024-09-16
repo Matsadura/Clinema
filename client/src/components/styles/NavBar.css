@@ -1,0 +1,19 @@
+	.navbar {
+		--p: 30px;
+		height: 60px;
+		clip-path: polygon(var(--p) 0, 100% 0, calc(100% - var(--p)) 100%, 0 100%);
+		position: relative;
+		right: 60px;
+		padding-left: 60px;
+		transition: all 0.5s ease-in-out;
+	}
+
+	.hamburger__icon {
+		--p: 30px;
+		height: 60px;
+		clip-path: polygon(var(--p) 0, 100% 0, calc(100% - var(--p)) 100%, 0 100%);
+		position: relative;
+		transition: all 0.5s ease-in-out;
+		position: absolute;
+		right: -34px;
+	}

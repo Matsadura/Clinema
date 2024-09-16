@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 
 const ProfilePage = () => {
     const [userData, setUserData] = useState({});
+    const navigate = useNavigate();
     // const [likedMovies, setLikedMovies] = useState([]);
     // const [savedMovies, setSavedMovies] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -15,11 +17,11 @@ const ProfilePage = () => {
                 if (token) {
                     const response = await axios.get(`${apiUrl}/users/profile`, {
                         headers: {
-                        Authorization: `Bearer ${token}`,
+                            Authorization: `Bearer ${token}`,
                         }
                     });
-                    const { first_name, last_name, id} = response.data;
-                    setUserData({ first_name, last_name, id});
+                    const { first_name, last_name, id } = response.data;
+                    setUserData({ first_name, last_name, id });
                     // setUserData(response.data);
                     console.log(response.data);
                 } else {
@@ -32,22 +34,22 @@ const ProfilePage = () => {
         fetchUserData();
     }, []);
 
-        // const fetchLikedMovies = async () => {
-        //     try {
-        //         const response = await axios.get('/user/liked-movies'); // Replace with your liked movies API endpoint
-        //         setLikedMovies(response.data);
-        //     } catch (error) {
-        //         console.error('Error fetching liked movies:', error);
-        //     }
-        // };
-        //
-        // const fetchSavedMovies = async () => {
-        //     try {
-        //         const response = await axios.get('/user/saved-movies'); // Replace with your saved movies API endpoint
-        //         setSavedMovies(response.data);
-        //     } catch (error) {
-        //         console.error('Error fetching saved movies:', error);
-        //     }
+    // const fetchLikedMovies = async () => {
+    //     try {
+    //         const response = await axios.get('/user/liked-movies'); // Replace with your liked movies API endpoint
+    //         setLikedMovies(response.data);
+    //     } catch (error) {
+    //         console.error('Error fetching liked movies:', error);
+    //     }
+    // };
+    //
+    // const fetchSavedMovies = async () => {
+    //     try {
+    //         const response = await axios.get('/user/saved-movies'); // Replace with your saved movies API endpoint
+    //         setSavedMovies(response.data);
+    //     } catch (error) {
+    //         console.error('Error fetching saved movies:', error);
+    //     }
     //     };
     //
     //     fetchUserData();
@@ -100,11 +102,13 @@ const ProfilePage = () => {
                     method: 'put',
                     headers: {
                         Authorization: `Bearer ${token}`,
-                    }}
+                    }
+                }
                 );
                 setIsEditing(false);
                 console.log("new Data", updatedData);
-                alert('Profile updated successfully!');
+                // alert('Profile updated successfully!');
+                navigate('/')
             }
         } catch (error) {
             console.error('Error updating profile:', error);
@@ -119,13 +123,13 @@ const ProfilePage = () => {
                 <input
                     type="text"
                     value={userData.first_name}
-                    onChange={(e) => setUserData({...userData, first_name: e.target.value})}
+                    onChange={(e) => setUserData({ ...userData, first_name: e.target.value })}
                     className="border p-2"
                 />
                 <input
                     type="text"
                     value={userData.last_name}
-                    onChange={(e) => setUserData({...userData, last_name: e.target.value})}
+                    onChange={(e) => setUserData({ ...userData, last_name: e.target.value })}
                     className="border p-2"
                 />
                 {/*<input*/}
