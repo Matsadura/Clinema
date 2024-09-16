@@ -18,6 +18,7 @@ export default function LogIn({ slideRun }) {
       console.log(res);
       if (res.status === 200) {
         localStorage.setItem("_token", res.data.token);
+        localStorage.setItem("_user_id", res.data.user_id); // TMP
         window.location.href = "/";
       } else {
         setErrCred(true);

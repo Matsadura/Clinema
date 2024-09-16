@@ -36,7 +36,39 @@ const AllMoviesPage = () => {
           );
 
           if (response.data.results && response.data.results.length > 0) {
-            return response.data.results[0];
+            const movieData = response.data.results[0];
+            
+            // ADD MOVIE TO DATABASE
+            const token = localStorage.getItem('_token');
+            if (token) {
+              const dataToSend = {
+                tmdb_id: movieData.id,
+                name: movieData.title,
+                description: movieData.overview,
+                poster: `https://image.tmdb.org/t/p/w500/${movieData.poster_path}`,
+                adult: movieData.adult,
+                popularity: movieData.popularity,
+                year: new Date(movieData.release_date).getFullYear(),
+                rating: movieData.vote_average
+              };
+
+              try {
+                const addMovieResponse = await axios.post(
+                  `${process.env.REACT_APP_API_URL}/movies`,
+                  dataToSend,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    }
+                  }
+                );
+                console.log('Movie added to database:', addMovieResponse.data);
+              } catch (dbErr) {
+                console.error('Error adding movie to database:', dbErr);
+              }
+            }
+            
+            return movieData;
           } else {
             return null;
           }
@@ -78,8 +110,8 @@ const AllMoviesPage = () => {
 
             return (
               <MovieCard
-                  key={movieDetails.id}
-                  userId = { user.id }
+                key={movieDetails.id}
+                userId = {localStorage.getItem('_user_id')} // TMP
                 movie_id={movieDetails.id}
                 title={movieDetails.title}
                 // adult={movieDetails.adult}

@@ -153,7 +153,9 @@ def save_or_liked(user_id):
     if existing_user_movie:
         return jsonify({'error': 'User Movie relation already exists'}), 409
 
-    if data['save'] is None and data['like'] is None:
+    save = data.get('save')
+    like = data.get('like')
+    if save is None and like is None:
         return jsonify({'error': 'Missing required save or like boolean'}), 400
 
     existing_user = storage.get(User, data['user_id'])

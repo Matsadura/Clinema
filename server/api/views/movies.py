@@ -57,10 +57,10 @@ def post_movies():
 
     existing_movie = storage.get_specific(Movie, 'name', name)
     if existing_movie:
-        return jsonify({'error': 'Movie name already exists'}), 400
+        return jsonify({'error': 'Movie name already exists'}), 409
 
     valid_attributes = ['name', 'description', 'poster', 'adult',
-                        'year', 'rating', 'popularity']
+                        'year', 'rating', 'popularity', 'tmdb_id']
     movie_parsed = {}
     for k, v in movie_data.items():
         if k in valid_attributes:
