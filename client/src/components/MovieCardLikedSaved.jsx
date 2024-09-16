@@ -8,58 +8,14 @@ import { MdPeopleAlt } from "react-icons/md";
 
 
 export default function MovieCard({userId, movie_id, title, poster, year, rate, popularity, trailer, language, description }) {
-export default function MovieCard({userId, movie_id, title, poster, year, rate, popularity, trailer, language }) {
     const [liked, setLiked] = useState(false)
     const [save, setSave] = useState(false);
-
-
-    const toggleLike = async (movie_id, liked) => {
 
 
     const toggleLike = async (movie_id, liked) => {
         try {
             const apiUrl = process.env.REACT_APP_API_URL;
             const token = localStorage.getItem('_token');
-            const userId = localStorage.getItem('_user_id');
-
-            // Check if user already liked this movie
-            const userLikedResponse = await axios.get(`${apiUrl}/${userId}/user_movies`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
-            });
-            console.log("9bel:", userLikedResponse);
-            const likedMovie = userLikedResponse.data.find(movie => movie && movie.movie_id && movie.movie_id === movie_id);
-            console.log("likedMovie", likedMovie);
-
-            if (likedMovie) {
-                // Update existing like record
-                const dataToSend = {
-                    user_id: userId,
-                    movie_id: movie_id,
-                    like: !liked  // Update like value to the opposite
-                };
-
-                const updateResponse = await axios.put(`${apiUrl}/${userId}/liked/${likedMovie.id}`, dataToSend, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    }
-                });
-
-                if (updateResponse.status === 200) {
-
-                    console.log("Like status updated (PUT):", updateResponse);
-                    setLiked(!liked);  // Toggle the local state
-                } else {
-                    console.error("Error updating like:", updateResponse.data);
-                }
-            } else {
-                // Send new like request
-                const dataToSend = {
-                    user_id: userId,
-                    movie_id: movie_id,
-                    like: true
-                };
             const userId = localStorage.getItem('_user_id');
 
             // Check if user already liked this movie
@@ -108,8 +64,6 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
                 });
                 console.log("New like added (POST):", response.data);
                 setLiked(true);
-                console.log("New like added (POST):", response.data);
-                setLiked(true);
             }
         } catch (error) {
             console.error("Error toggling like:", error.response?.data || error.message);
@@ -117,50 +71,9 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
     };
 
     const toggleSave = async (movie_id, saved) => {
-    const toggleSave = async (movie_id, saved) => {
         try {
             const apiUrl = process.env.REACT_APP_API_URL;
             const token = localStorage.getItem('_token');
-            const userId = localStorage.getItem('_user_id');
-
-            // Check if user already liked this movie
-            const userSavedResponse = await axios.get(`${apiUrl}/${userId}/user_movies`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
-            });
-            console.log("9bel:", userSavedResponse);
-            const savedMovie = userSavedResponse.data.find(movie => movie && movie.movie_id && movie.movie_id === movie_id);
-            console.log("savedMovie", savedMovie);
-
-            if (savedMovie) {
-                // Update existing like record
-                const dataToSend = {
-                    user_id: userId,
-                    movie_id: movie_id,
-                    save: !save  // Update like value to the opposite
-                };
-
-                const updateResponse = await axios.put(`${apiUrl}/${userId}/save/${savedMovie.id}`, dataToSend, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    }
-                });
-
-                if (updateResponse.status === 200) {
-
-                    console.log("Save status updated (PUT):", updateResponse);
-                    setSave(!save);  // Toggle the local state
-                } else {
-                    console.error("Error updating save:", updateResponse.data);
-                }
-            } else {
-                // Send new like request
-                const dataToSend = {
-                    user_id: userId,
-                    movie_id: movie_id,
-                    save: true
-                };
             const userId = localStorage.getItem('_user_id');
 
             // Check if user already liked this movie
@@ -207,8 +120,6 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
                         Authorization: `Bearer ${token}`,
                     }
                 });
-                console.log("New like added (POST):", response.data);
-                setSave(true);
                 console.log("New like added (POST):", response.data);
                 setSave(true);
             }
@@ -266,34 +177,25 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
                         <div className='md:text-start text-center'>
                             <p className='md:mb-0 mb-1'>Language</p>
                             <p className='md:text-lg md:text-md font-bold'>{language || 'Nolang'}</p>
-                            <p className='md:text-lg md:text-md font-bold'>{language || 'Nolang'}</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         {/* This is the buttons side*/}
-        <div className='bg-secondary rounded-3xl flex flex-col md:h-96 text-white'>
+        {/* <div className='bg-secondary rounded-3xl flex flex-col md:h-96 text-white'>
             <div className='p-4 flex justify-center gap-4 rounded-3xl bg-secondary'>
                 <button
                     onClick={() => toggleLike(movie_id, liked)}
                     className={`rounded-2xl ${liked ? 'text-red-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
                     <TiHeartFullOutline/>
                 </button>
-                    onClick={() => toggleLike(movie_id, liked)}
-                    className={`rounded-2xl ${liked ? 'text-red-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
-                    <TiHeartFullOutline/>
-                </button>
                 <button
                     onClick={() => toggleSave(movie_id, liked)}
                     className={`rounded-2xl ${save ? 'text-yellow-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
                     <TiBookmark/>
                 </button>
-                    onClick={() => toggleSave(movie_id, liked)}
-                    className={`rounded-2xl ${save ? 'text-yellow-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
-                    <TiBookmark/>
-                </button>
             </div>
-        </div>
+        </div> */}
     </div >
 }
