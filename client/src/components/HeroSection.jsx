@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { FiChevronRight } from "react-icons/fi";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import clinema_logo from '../images/clinema2.webp';
+import LocationComponent from './LocationComponent';
 
 export default function HeroSection() {
 	const { user } = useContext(DataContext);
@@ -17,7 +19,7 @@ export default function HeroSection() {
 		});
 	}, []);
 
-	return <main className='h-screen grid md:grid-cols-2 grid-cols-1 p-10 md:gap-16 items-center lg:py-14 lg:px-24 mt-10 md:mt-0'>
+	return <main className='grid md:grid-cols-2 grid-cols-1 p-10 md:gap-16 items-center lg:py-14 lg:px-24 mt-10 md:mt-0'>
 		<div data-aos="fade-right" className="flex flex-col md:items-start items-center md:text-start text-center">
 			<a
 				href="#location_section"
@@ -53,12 +55,15 @@ export default function HeroSection() {
 					Sign up
 				</a>
 			</div>}
-			<div data-aos="fade-left" className="max-w-md bg-cover md:h-full flex justify-center  md:px-5 sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-5">
+			{/* <div data-aos="fade-left" className="max-w-md bg-cover md:h-full flex justify-center  md:px-5 sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-5">
 				<img
 					className="md:w-full w-1/2 lg:inset-y-0 md:p-8 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
 					src="https://tailwindui.com/img/component-images/cloud-illustration-teal-cyan.svg"
 					alt=""
 				/>
+			</div> */}
+			<div data-aos="fade-left" className="max-w-md bg-cover md:h-full flex justify-center  md:px-5 sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-5">
+				<LocationComponent />
 			</div>
 		</div>
 	</main>

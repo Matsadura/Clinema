@@ -6,6 +6,7 @@ import { useContext, useState } from 'react';
 import './styles/NavBar.css';
 import { DataContext } from "./Context";
 import { useNavigate } from "react-router-dom";
+import clinema_logo from '../images/clinema2.webp';
 import ProfilePage from '../scenes/UserProfile';
 
 function Navbar() {
@@ -53,7 +54,7 @@ function Navbar() {
                 </a>
               </div>
               <div className="hidden md:space-x-8 space-x-1 md:ml-10 pt-2 md:flex">
-                <button href="#" className="text-base font-medium text-white-light hover:text-primary">Weather</button>
+                <a href="/#location_section" className=" scroll-smooth text-base font-medium text-white-light hover:text-primary">Weather</a>
                 <button href="#" className="text-base font-medium text-white hover:text-primary">Mood</button>
                 <button onClick={handleSavedMoviesClick} className="text-base font-medium text-white hover:text-primary">Saved</button>
                 <button onClick={handleLikedMoviesClick} className="text-base font-medium text-white hover:text-primary">Liked</button>

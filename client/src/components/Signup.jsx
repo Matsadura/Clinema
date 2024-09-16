@@ -3,11 +3,11 @@ import logoImage from "../images/brand-logo-light.svg";
 import { request } from "../tools/requestModule";
 
 export default function SignUp({ slideRun }) {
-  const [email, setEmail] = useState("alien@alianice.com");
-  const [fname, setFname] = useState("alien");
-  const [lname, setLname] = useState("Hikaro");
-  const [password, setPassword] = useState("123456789");
-  const [ConfPassword, setConfPassword] = useState("123456789");
+  const [email, setEmail] = useState("");
+  const [fname, setFname] = useState("");
+  const [lname, setLname] = useState("");
+  const [password, setPassword] = useState("");
+  const [ConfPassword, setConfPassword] = useState("");
   const [errPassowrd, setErrPassword] = useState(false);
   const [error, setError] = useState(null);
 
@@ -144,11 +144,10 @@ export default function SignUp({ slideRun }) {
                   onChange={(e) => setPassword(e.target.value)}
                   value={password}
                   required
-                  className={`block w-full text-white bg-secondary-dark ${
-                    errPassowrd
-                      ? "border-2 border-red-400 focus:shadow-red-400"
-                      : "border border-primary focus:shadow-primary"
-                  } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
+                  className={`block w-full text-white bg-secondary-dark ${errPassowrd
+                    ? "border-2 border-red-400 focus:shadow-red-400"
+                    : "border border-primary focus:shadow-primary"
+                    } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
                 />
               </div>
 
@@ -176,16 +175,15 @@ export default function SignUp({ slideRun }) {
                   required
                   onChange={(e) => setConfPassword(e.target.value)}
                   value={ConfPassword}
-                  className={`block w-full text-white bg-secondary-dark ${
-                    errPassowrd
-                      ? "border-2 border-red-400 focus:shadow-red-400"
-                      : "border border-primary focus:shadow-primary"
-                  } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
+                  className={`block w-full text-white bg-secondary-dark ${errPassowrd
+                    ? "border-2 border-red-400 focus:shadow-red-400"
+                    : "border border-primary focus:shadow-primary"
+                    } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
                 />
               </div>
             </div>
             <div className="p-0 m-0">
-              <span className="text-sm bg-secondary-dark rounded-md px-2 pt-2 pb-2 flex items-center text-red-400">
+              <span className={`text-sm  ${error ? "bg-secondary-dark" : null} rounded-md px-2 pt-2 pb-2 flex items-center text-red-400`}>
                 {error || <br />}
               </span>
             </div>

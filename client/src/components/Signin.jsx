@@ -3,8 +3,8 @@ import logoImage from "../images/brand-logo-light.svg";
 import { request } from "../tools/requestModule";
 
 export default function LogIn({ slideRun }) {
-  const [email, setEmail] = useState("test@test.com");
-  const [password, setPassword] = useState("123456789");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errCred, setErrCred] = useState(false);
 
   function hondleSubmit(e) {
@@ -66,11 +66,10 @@ export default function LogIn({ slideRun }) {
                   autoComplete="email"
                   placeholder="youemail@company.domain"
                   required
-                  className={`block w-full text-white bg-secondary-dark ${
-                    errCred
+                  className={`block w-full text-white bg-secondary-dark ${errCred
                       ? "border-2 border-red-400 focus:shadow-red-400"
                       : "border border-primary focus:shadow-primary"
-                  } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
+                    } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
                 />
               </div>
             </div>
@@ -92,11 +91,10 @@ export default function LogIn({ slideRun }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className={`block w-full text-white bg-secondary-dark ${
-                    errCred
+                  className={`block w-full text-white bg-secondary-dark ${errCred
                       ? "border-2 border-red-400 focus:shadow-red-400"
                       : "border border-primary focus:shadow-primary"
-                  } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
+                    } rounded-md px-3 py-2 placeholder-gray-500  focus:shadow-sm  focus:outline-none sm:text-sm`}
                 />
                 {errCred ? (
                   <span className="pl-2 pt-2 block text-sm text-red-100">

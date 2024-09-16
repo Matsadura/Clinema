@@ -54,7 +54,7 @@ const Moods = () => {
             const apiUrl = process.env.REACT_APP_API_URL;
             const response = await axios.post(`${apiUrl}/movies_by_mood`, { mood: selectedMoods });
             const suggestions = response.data.suggestions;
-            navigate('/AllMovies', {state: { suggestions }});
+            navigate('/AllMovies', { state: { suggestions } });
 
         } catch (error) {
             console.error('Error fetching movie suggestions:', error);
@@ -74,7 +74,7 @@ const Moods = () => {
 
                 if (response.data && Array.isArray(response.data.suggestions)) {
                     const suggestions = response.data.suggestions;
-                    navigate('/AllMovies', {state: { suggestions }});
+                    navigate('/AllMovies', { state: { suggestions } });
                 } else {
                     throw new Error("Unexpected response structure");
                 }
@@ -89,12 +89,12 @@ const Moods = () => {
     const filteredMoods = moods.filter(mood => mood.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className=" flex flex-col items-center bg-gradient-to-tr from-indigo-700 to-secondary-lighter">
-            <h2 className="text-4xl font-bold my-8 ">I want to feel...</h2>
+        <div className="md:h-screen flex flex-col items-center border-t-2 border-primary py-14">
+            <h2 className="text-4xl font-bold text-white my-8">I want to feel...</h2>
             <input
                 type="text"
                 placeholder="Use emotive words or emojis"
-                className="w-[50%] p-2 rounded-md border-2 border-primary"
+                className="w-[50%] p-4 bg-secondary-dark text-white rounded-md border-2 border-primary focus:outline-none mb-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -103,7 +103,7 @@ const Moods = () => {
                     {filteredMoods.map((mood) => (
                         <button
                             key={mood.name}
-                            className={`flex items-center text-2xl justify-center space-x-2 px-8 py-2 rounded-full transition-all duration-200 ease-in-out
+                            className={`flex items-center md:text-2xl text-sm justify-center border-2 border-primary space-x-2 px-8 py-2 rounded-full transition-all duration-200 ease-in-out
                         ${selectedMoods.includes(mood.name) ? 'bg-primary text-black' : 'bg-secondary-dark text-white'} 
                         hover:scale-110 hover:shadow-md`}
                             onClick={() => handleMoodClick(mood)}
@@ -115,19 +115,19 @@ const Moods = () => {
                 </div>
                 <div className="my-6 flex justify-center space-x-4">
 
-                        <button
-                            className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-700 transition-all duration-500"
-                            onClick={handleWeatherAndMoodClick}
-                        >
-                            Movies by Mood & Weather
-                        </button>
+                    <button
+                        className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-700 transition-all duration-500"
+                        onClick={handleWeatherAndMoodClick}
+                    >
+                        Movies by Mood & Weather
+                    </button>
 
                     <button
-                        className="px-6 py-2 bg-white text-black rounded-md hover:bg-primary hover:text-secondary transition-all duration-500"
+                        className="px-6 py-2 bg-white text-bold text-black rounded-md hover:bg-primary hover:text-secondary transition-all duration-500"
                         onClick={handleSubmit}
                         disabled={selectedMoods.length === 0}
                     >
-                        See Movies
+                        Movies By Mood
                     </button>
                     <button
                         className="px-6 py-2 bg-white text-black rounded-md hover:bg-red-600 transition-all duration-500"
