@@ -18,7 +18,7 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
 
     const handleSave = useCallback(async () => {
         setSave(prevState => !prevState);
-        await toggleSave(userId, movie_id, true); // HADI KHAS TKUN DYMANIC 3LA HSSAB CHNU KANT 9BL F DATABASE
+        await toggleSave(userId, movie_id, true);
     }, [userId, movie_id]);
 
     const handleOrder = useCallback(async () => {
@@ -33,10 +33,17 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
             const dataToSend = {
                 user_id: userId,
                 movie_id: movie_id,
-                like: true // HADI KHAS TKUN DYMANIC 3LA HSSAB CHNU KANT 9BL F DATABASE
+                like: true
             };
 
             if (token) {
+                const userLikedResponse = await axios.get(`${apiUrl}/${userId}/liked`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                })
+                console.log("liked movies:", userLikedResponse);
+
                 const response = await axios.post(`${apiUrl}/${userId}/liked`, dataToSend, {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -55,7 +62,7 @@ export default function MovieCard({userId, movie_id, title, poster, year, rate, 
             const token = localStorage.getItem('_token');
             const dataToSend = {
                 user_id: userId,
-                movie_id: movie_id, // HADI KHAS TKUN DYMANIC 3LA HSSAB CHNU KANT 9BL F DATABASE
+                movie_id: movie_id,
                 save: true
             };
 
