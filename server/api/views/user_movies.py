@@ -99,7 +99,7 @@ def save_movies(user_id):
 
     all_user_movies = storage.all(User_Movie).values()
     save_movies = [
-        um.movie.to_dict() for um in all_user_movies
+        um.to_dict() for um in all_user_movies
         if um.user_id == current_id and um.save
     ]
     return jsonify(save_movies)
