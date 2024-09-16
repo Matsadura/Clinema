@@ -10,20 +10,22 @@ from models.user import User
 
 jwt = JWTManager()
 
+
 @app_views.route("/auth_validate", methods=['GET'])
 @jwt_required()
-def validate_user(): 
+def validate_user():
     try:
         user_id = get_jwt_identity()
     except Exception as e:
         return jsonify({"error": "Invalid token"}), 401
-    
+
     user = storage.get_specific(User, 'id', user_id)
     if not user:
         return jsonify({"error": "Invalid token"}), 401
     return jsonify({"first_name": user.first_name,
                     "last_name": user.last_name,
                     "avatar": user.avatar})
+
 
 @jwt.user_identity_loader
 def user_identity_lookup(user):
