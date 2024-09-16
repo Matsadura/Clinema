@@ -9,6 +9,7 @@ related to movie operations.
 Routes:
     - GET /movies: Retrieve all movies.
     - POST /movies: Create a new movie.
+    - GET /movies/<movie_id>: Retrieve a specific movie
 
 Exceptions:
     - Invalid token: Raised when the JWT token is invalid.
@@ -83,3 +84,12 @@ def post_movies():
     storage.new(new_movie)
     storage.save()
     return jsonify(new_movie.to_dict()), 201
+
+
+@app_views.route('/movies/<movie_id>', methods=['GET'])
+def get_movie(movie_id):
+    """Get specific movie"""
+    movie = storage.get_specific(Movie, 'tmdb_id', movie_id)
+    if not movie:
+        return jsonify({'error': 'Movie not found'}), 404
+    return jsonify(movie.to_dict())
