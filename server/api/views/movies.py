@@ -40,6 +40,19 @@ def movies():
 
 @app_views.route('/movies', methods=['POST'])
 def post_movies():
+    """
+    POST
+        - Header: Authorization Bearer Token (required)
+    Input:
+        - name: String (required)
+        - tmdb_id: Integer (required)
+        - description: String
+        - Poster: String
+        - adult: Boolean
+        - popularity: Float
+        - year: Integer
+        - rating: Float
+    """
     try:
         verify_jwt_in_request()
         current_user = get_jwt_identity()
