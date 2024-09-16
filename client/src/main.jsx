@@ -9,7 +9,7 @@ import AuthPage from "./scenes/AuthPage.jsx";
 import About from "./scenes/About.jsx";
 import UserProfile from "./scenes/UserProfile.jsx";
 import LikedMoviesPage from "./scenes/LikedMoviesPage.jsx";
-import SavedMoviesPage from "./scenes/SavecMoviesPage.jsx";
+import SavedMoviesPage from "./scenes/SavedMoviesPage.jsx";
 
 createRoot(document.getElementById("root")).render(
   <ContextProvider>
