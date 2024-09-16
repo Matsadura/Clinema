@@ -1,17 +1,50 @@
 #!/usr/bin/python3
-"""Users related routes"""
+"""
+Users related routes
+
+This module contains routes for handling user-related requests such
+as retrieving user profiles and managing user profiles based on the user_id.
+These routes require JWT authentication for access control.
+
+Routes:
+    - /users/profile:
+        - GET: Retrieve the user profile of the authenticated user.
+
+    - /users/<user_id>/profile:
+        - DELETE: Delete the user profile of the authenticated user.
+        - PUT: Update the user profile of the authenticated user.
+
+Attributes:
+    - User: Class representing a user in the database.
+    - storage: Object for interacting with the database storage.
+
+
+Exceptions:
+    - Invalid token: Raised when the JWT token is invalid.
+    - User not found: Raised when the user is not found in the database.
+    - No data provided: Raised when no data is provided in the request.
+    - Invalid attribute {attribute}: Raised when an invalid attribute is
+    provided in the request data.
+
+Returns:
+    - JSON response containing the user data or appropriate error messages.
+"""
 from api.views import app_views
+from datetime import datetime
 from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from models.user import User
 from models import storage
-from datetime import datetime
+from models.user import User
 
 
 @app_views.route('/users/profile', methods=['GET'])
 @jwt_required()
 def get_user_profile():
-    """Get user profile"""
+    """Get user profile
+
+    GET
+        - Header: Authorization Bearer Token (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:
@@ -26,7 +59,15 @@ def get_user_profile():
 @app_views.route('/users/<user_id>/profile', methods=['DELETE', 'PUT'])
 @jwt_required()
 def handle_user_id(user_id):
-    """Handle user_id related requests"""
+    """
+    Handle user_id related requests
+
+    POST
+        - Header: Authorization Bearer Token (required)
+    Input:
+        first_name: String (required)
+        last_name: String (required)
+    """
     try:
         current_user = get_jwt_identity()
     except Exception as e:

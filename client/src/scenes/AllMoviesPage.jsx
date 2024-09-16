@@ -25,18 +25,51 @@ const AllMoviesPage = () => {
       const promises = titles.map(async (title) => {
         try {
           const response = await axios.get(
-            `https://api.themoviedb.org/3/search/movie`,
-            {
-              params: {
-                api_key: tmDbApiKey,
-                query: title,
-                page: 1,
-              },
-            }
+              `https://api.themoviedb.org/3/search/movie`,
+              {
+                params: {
+                  api_key: tmDbApiKey,
+                  query: title,
+                  page: 1,
+                },
+              }
           );
 
           if (response.data.results && response.data.results.length > 0) {
-            return response.data.results[0];
+            const movieData = response.data.results[0];
+
+            // ADD MOVIE TO DATABASE
+            const token = localStorage.getItem('_token');
+            if (token) {
+              const dataToSend = {
+                tmdb_id: movieData.id,
+                title: movieData.title,
+                description: movieData.overview,
+                poster: `https://image.tmdb.org/t/p/w500/${movieData.poster_path}`,
+                adult: movieData.adult,
+                popularity: movieData.popularity,
+                year: new Date(movieData.release_date).getFullYear(),
+                rating: movieData.vote_average,
+                language: movieData.original_language
+              };
+
+              try {
+                const addMovieResponse = await axios.post(
+                    `${process.env.REACT_APP_API_URL}/movies`,
+                    dataToSend,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                      }
+                    }
+                );
+                console.log('Movie added to database:', addMovieResponse.data);
+              } catch (dbErr) {
+                console.error('Error adding movie to database:', dbErr);
+              }
+            }
+
+            return movieData;
           } else {
             return null;
           }
@@ -63,38 +96,39 @@ const AllMoviesPage = () => {
   };
 
   return (
-    <div>
-      <Navbar />
-      <div className="flex flex-col items-center gap-20">
-        {loading ? (
-          <p>Loading movies...</p>
-        ) : error ? (
-          <p>Error: {error}</p>
-        ) : (
-          Object.keys(detailedMovies).map((title) => {
-            const movieDetails = detailedMovies[title];
-            const moviePoster = `https://image.tmdb.org/t/p/w500/${movieDetails.poster_path}`;
-            // '/path/to/default-poster.jpg';
+      <div>
+        <Navbar />
+        <div className="flex flex-col items-center gap-20">
+          {loading ? (
+              <p>Loading movies...</p>
+          ) : error ? (
+              <p>Error: {error}</p>
+          ) : (
+              Object.keys(detailedMovies).map((title) => {
+                const movieDetails = detailedMovies[title];
+                const moviePoster = `https://image.tmdb.org/t/p/w500/${movieDetails.poster_path}`;
+                // '/path/to/default-poster.jpg';
 
-            return (
-              <MovieCard
-                  key={movieDetails.id}
-                  userId = { user.id }
-                movie_id={movieDetails.id}
-                title={movieDetails.title}
-                // adult={movieDetails.adult}
-                poster={moviePoster}
-                year={movieDetails.release_date?.slice(0, 4)}
-                rate={movieDetails.vote_average}
-                popularity={movieDetails.popularity}
-                trailer={movieDetails.homepage}
-                lang={movieDetails.original_language}
-              />
-            );
-          })
-        )}
+                return (
+                    <MovieCard
+                        key={movieDetails.id}
+                        userId = {localStorage.getItem('_user_id')} // TMP
+                        movie_id={movieDetails.id}
+                        title={movieDetails.title}
+                        // adult={movieDetails.adult}
+                        poster={moviePoster}
+                        year={movieDetails.release_date?.slice(0, 4)}
+                        rate={movieDetails.vote_average}
+                        popularity={movieDetails.popularity}
+                        trailer={movieDetails.homepage}
+                        description={movieDetails.overview}
+                        language={movieDetails.language || movieDetails.original_language}
+                    />
+                );
+              })
+          )}
+        </div>
       </div>
-    </div>
   );
 };
 

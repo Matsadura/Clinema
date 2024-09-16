@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-""" Starts the Flask web app """
-import os
+""" Weather related routes """
 import requests
-from dotenv import load_dotenv  # type: ignore
-from flask import jsonify, request  # type: ignore
+from flask import jsonify, request
 from api.app import OPENWEATHER_API_KEY
 from api.views import app_views
 
 
-# Get the Weather from OpenWeather API using lat and lon
 def get_weather(lat, lon):
+    """
+    Get the Weather from OpenWeather API using latitude and longitude.
+
+    Parameters:
+    - lat (float): Latitude coordinate.
+    - lon (float): Longitude coordinate.
+
+    Returns:
+    - dict: Weather data in JSON format from OpenWeather API.
+    """
     base_url = "https://api.openweathermap.org/data/2.5/weather"
     params = {
         'lat': lat,
@@ -17,19 +24,22 @@ def get_weather(lat, lon):
         'appid': OPENWEATHER_API_KEY,
         'units': 'metric'
     }
-    # print(OPENWEATHER_API_KEY)
+
     response = requests.get(base_url, params=params)
     print(response.json)
     if response.status_code == 200:
-
-        return response.json()  # Return the weather data as JSON
-    else:
-        return None  # Return None if the request failed
+        return response.json()
+    return None
 
 
-# Weather route to get the weather data using get_weather method
 @app_views.route('/weather', methods=['GET'])
 def weather():
+    """
+    Weather route to get the weather data using the get_weather method.
+
+    Returns:
+    - JSON: Weather data in JSON format.
+    """
     lat = request.args.get('lat')
     lon = request.args.get('lon')
 
@@ -42,5 +52,4 @@ def weather():
 
     if weather_data:
         return jsonify(weather_data)
-    else:
-        return jsonify({'error': 'Failed to fetch weather data'}), 500
+    return jsonify({'error': 'Failed to fetch weather data'}), 500
