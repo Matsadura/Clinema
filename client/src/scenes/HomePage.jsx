@@ -12,7 +12,6 @@ const HomePage = () => {
       <LocationComponent />
       <MovieList />
       <Moods />
-      {/*<MovieCard/>*/}
     </div>
   );
 };

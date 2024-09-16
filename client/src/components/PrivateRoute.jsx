@@ -8,6 +8,9 @@ export const PrivateRoute = ({ open = false, element: Element }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { setAuth, setUser, isAuthenticated } = useContext(DataContext);
   const token = localStorage.getItem("_token");
+  if (!token && open) {
+    return <Element/>
+  }
   const headers = {
     headers: {
       Authorization: `Bearer ${token}`,

@@ -1,17 +1,20 @@
-import { useEffect, useState } from "react";
+import {useContext, useEffect, useState} from "react";
 import { useLocation } from "react-router-dom";
 import MovieCard from "../components/MovieCard.jsx";
 import axios from "axios";
 import Navbar from "../components/Navbar.jsx";
+import {DataContext} from "../components/Context.jsx";
 
 const AllMoviesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [detailedMovies, setDetailedMovies] = useState({});
   const location = useLocation();
+  const { user } = useContext(DataContext);
 
   useEffect(() => {
     if (location.state && location.state.suggestions) {
+      console.log("one");
       fetchDetailedMovies(location.state.suggestions);
     }
   }, [location]);
@@ -75,7 +78,9 @@ const AllMoviesPage = () => {
 
             return (
               <MovieCard
-                key={title}
+                  key={movieDetails.id}
+                  userId = { user.id }
+                movie_id={movieDetails.id}
                 title={movieDetails.title}
                 // adult={movieDetails.adult}
                 poster={moviePoster}

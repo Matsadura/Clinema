@@ -2,10 +2,102 @@ import { TiHeartFullOutline, TiBookmark, TiEject, TiArrowRight, TiStarFullOutlin
 import { LuClock } from "react-icons/lu";
 import { MdDateRange } from "react-icons/md";
 import { MdLanguage } from "react-icons/md";
-import { useState } from 'react';
+import {useState, useCallback, useEffect} from 'react';
+import axios from 'axios';
 
-export default function MovieCard({ title, poster, year, rate, popularity, trailer, lang }) {
-    const [like, setLike] = useState(false);
+export default function MovieCard({userId, movie_id, title, poster, year, rate, popularity, trailer, lang }) {
+    const [liked, setLiked] = useState(false)
+    const [save, setSave] = useState(false);
+    const [order, setOrder] = useState(false);
+    const [userData, setUserData] = useState({});
+
+    const handleLike = useCallback(async () => {
+        setLiked(prevState => !prevState);
+        await toggleLike(userId, movie_id, 'liked');
+    }, [userId, movie_id]);
+
+    const handleSave = useCallback(async () => {
+        setSave(prevState => !prevState);
+        await toggleSave(userId, movie_id, 'save');
+    }, [userId, movie_id]);
+
+    const handleOrder = useCallback(async () => {
+        setOrder(prevState => !prevState);
+        // Implement order logic here
+    }, []);
+
+    const toggleLike = async (userId, movie_id, liked) => {
+        try {
+            const apiUrl = process.env.REACT_APP_API_URL;
+            const token = localStorage.getItem('_token');
+            const dataToSend = {
+                user_id: userId,
+                movie_id: movie_id,
+                like: liked
+            };
+
+            if (token) {
+                const response = await axios.post(`${apiUrl}/${userId}/liked`, dataToSend, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+                console.log("Like response:", response.data);
+            }
+        } catch (error) {
+            console.error("Error toggling like:", error.response?.data || error.message);
+        }
+    };
+
+    const toggleSave = async (userId, movie_id, save) => {
+        try {
+            const apiUrl = process.env.REACT_APP_API_URL;
+            const token = localStorage.getItem('_token');
+            const dataToSend = {
+                user_id: userId,
+                movie_id: movie_id,
+                save: save
+            };
+
+            if (token) {
+                const response = await axios.post(`${apiUrl}/${userId}/save`, dataToSend, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+                console.log("Save response:", response.data);
+            }
+        } catch (error) {
+            console.error("Error toggling save:", error.response?.data || error.message);
+        }
+    };
+
+
+
+    // const toggleUserMovie = async (userId, movie_id, action) => {
+    //     try {
+    //         const apiUrl = process.env.REACT_APP_API_URL;
+    //         const token = localStorage.getItem('_token');
+    //         const dataToSend = {
+    //             user_id: userId,
+    //             movie_id: movie_id,
+    //             save: action === true ? save : false,
+    //             like: action === true ? liked : false
+    //         };
+    //
+    //         if (token) {
+    //             const response = await axios.post(`${apiUrl}/${userId}/${action}`, dataToSend, {
+    //                 headers: {
+    //                     Authorization: `Bearer ${token}`,
+    //                 }
+    //             });
+    //         }
+    //         console.log("data", dataToSend);
+    //     } catch (error) {
+    //         console.error(error.response?.data || error.message);
+    //     }
+    // };
+
 
 
     return <div className='flex justify-start  ml-5 mt-5 md:flex-row flex-col md:h-96 h-fit'>
@@ -60,12 +152,18 @@ export default function MovieCard({ title, poster, year, rate, popularity, trail
         {/* This is the buttons side*/}
         <div className='bg-secondary rounded-3xl flex flex-col md:h-96 text-white'>
             <div className='p-4 flex justify-center gap-4 rounded-3xl bg-secondary'>
-                <button className={`rounded-2xl ${like ? 'text-red-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`} onClick={() => setLike(!like)}><TiHeartFullOutline /></button>
-                <button className="rounded-2xl text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter"><TiBookmark /></button>
+                <button
+                    onClick={handleLike}
+                    className={`rounded-2xl ${liked ? 'text-red-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}><TiHeartFullOutline /></button>
+                <button
+                    onClick={handleSave}
+                    className="rounded-2xl text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter"><TiBookmark /></button>
                 <button className="rounded-2xl text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter"><TiEject /></button>
             </div>
             {/* This will be hidden in the movile devices */}
-            <div className='pb-10 bg-secondary-light rounded-3xl rounded-l-none h-full items-end justify-center hidden md:flex'>
+            <div
+                onClick={handleOrder}
+                className='pb-10 bg-secondary-light rounded-3xl rounded-l-none h-full items-end justify-center hidden md:flex'>
                 <a href={trailer} className='text-white font-bold text-2xl p-2 px-4 flex justify-center items-center bg-primary hover:bg-green-700 rounded-xl'>Watch trailer <TiArrowRight /></a>
             </div>
         </div>
