@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import axios from 'axios';
 import useLocation from '../tools/useLocation.js';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const MovieList = () => {
     const { latitude, longitude, error: locationError } = useLocation();
@@ -85,10 +85,10 @@ const MovieList = () => {
     }
 
     return (
-        <div className="h-screen flex flex-col space-y-4 p-4">
+        <div id="movies" className="h-screen flex flex-col space-y-4 p-4">
             {loading && <p>Loading movie information...</p>}
             {error && <p className="text-red-500">{error}</p>}
-            <h1 className="flex justify-center text-3xl text-white font-semibold mt-4">Your Movies Based On Your Local Weather</h1>
+            <h1 className="flex justify-center text-3xl text-white font-semibold mt-4">Recommendations Based On Your Local Weather</h1>
             <div className="flex justify-end">
                 <button
                     className="mb-6 group group-hover:before:duration-500 group-hover:after:duration-500 after:duration-500 hover:border-rose-300 hover:before:[box-shadow:_20px_20px_20px_30px_#a21caf] duration-500 before:duration-500 hover:duration-500 underline underline-offset-2 hover:after:-right-8 hover:before:right-12 hover:before:-bottom-8 hover:before:blur hover:underline hover:underline-offset-4  origin-left hover:decoration-2 hover:text-rose-300 relative bg-neutral-800 h-10 w-40 border text-left p-3 text-gray-50 text-base font-bold rounded-lg  overflow-hidden  before:absolute before:w-12 before:h-12 before:content[''] before:right-1 before:top-1 before:z-10 before:bg-violet-500 before:rounded-full before:blur-lg  after:absolute after:z-10 after:w-20 after:h-20 after:content['']  after:bg-rose-300 after:right-8 after:top-3 after:rounded-full after:blur-lg"
@@ -108,11 +108,11 @@ const MovieList = () => {
                                 key={index}
                                 className={`w-[250px]  shrink-0 bg-white overflow-hidden rounded-3xl shadow-lg  animate-infinite-scroll hover:animate-pause`}
                             >
-                                    <img
-                                        src={`https://image.tmdb.org/t/p/w500${detailedMovies[movie].poster_path}`}
-                                        alt={detailedMovies[movie].title}
-                                        className="object-cover "
-                                    />
+                                <img
+                                    src={`https://image.tmdb.org/t/p/w500${detailedMovies[movie].poster_path}`}
+                                    alt={detailedMovies[movie].title}
+                                    className="object-cover "
+                                />
                             </div>) : null
                     ))}
                 </div>

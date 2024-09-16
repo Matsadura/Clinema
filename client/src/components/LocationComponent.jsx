@@ -37,41 +37,39 @@ const LocationComponent = () => {
 
     return (
         <div
-            className={` relative h-screen flex flex-col justify-center items-center py-16 px-8 rounded-lg shadow-lg ${
-                isDaytime ? 'bg-cover bg-center' : 'bg-cover bg-center'
-            }`}
-            style={{
-                backgroundImage: `url(${isDaytime ? daytime : nighttime})`,
-                backgroundSize: 'cover',
-            }}
+            id="location_section"
+            className={` relative h-screen flex flex-col justify-center items-center py-16 px-8 rounded-lg shadow-lg }`}
         >
-            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-90 rounded-lg"></div>
             <div className="relative z-10">
-                <h2 className="text-4xl text-white font-bold">Your Location Weather</h2>
+
 
                 {weatherData ? (
                     <div className="flex flex-col items-center mt-8">
                         <img src={`http://openweathermap.org/img/wn/${weatherData.weather[0].icon}@4x.png`}
-                             alt="Weather Icon" className="w-44 h-44 rounded-full"/>
+                            alt="Weather Icon" className="w-44 h-44  rounded-full" />
                         <p className="text-3xl text-white font-semibold mt-4">{weatherData.weather[0].main}</p>
-                        <p className="text-xl text-white">{weatherData.main.temp}°C</p>
+                        <p className="text-5xl text-bold my-5 text-white">{weatherData.main.temp}°C</p>
                         <p className="text-base text-white opacity-75">{weatherData.weather[0].description}</p>
+                        <p className="text-white text-5xl">{weatherData.name}</p>
                     </div>
                 ) : (
                     <p className="text-lg text-white mt-4">{error || "Fetching weather..."}</p>
                 )}
 
                 <div className="flex flex-col items-center mt-2 space-y-2">
-                    <p className="text-white">See all perfect Movies for This Weather</p>
+                    <p className="text-white text-xl text-center my-5">See all perfect Movies for This Weather</p>
 
-                    <button
+                    <a
+                        href="#movies"
                         className="text-white hover:text-gray-200 bg-secondary-lighter hover:bg-primary focus:ring-secondary-light font-medium rounded-lg text-xl px-5 py-2.5 text-center mr-2 mb-2 dark:hover:bg-primary">
                         Scroll Down!
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
     );
 };
+
+
 
 export default LocationComponent;
