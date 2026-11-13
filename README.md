@@ -41,7 +41,10 @@ stack ships as small, non-root Docker images with health checks.
 - 🧠 **Learns your taste:** likes (+2), dislikes (−2), saves (+1) and opened details (+0.5) build a
   time-decayed taste profile (genres, directors, themes, eras, languages, tone). It's injected into
   every prompt and shown on your profile page.
-- ❤️ **Library:** likes, a watchlist and a "Not for me" list, with optimistic updates.
+- ❤️ **Library:** likes, a watchlist, films you've seen and a "Not for me" list, with optimistic updates.
+- 🔎 **Search & discover:** search any film by title, browse this week's trending films, and see your
+  recommendation and viewing history grouped by day.
+- 🌗 **Dark and light themes:** a dark "cinema" theme by default and a warm light theme, both WCAG AA.
 - 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
 - 🔑 **Bring your own API keys:** signed-in users can plug in their own Groq and TMDB keys.
   Keys are verified with the provider, encrypted at rest and never shown again. Anything a user doesn't
@@ -207,7 +210,9 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 | `POST` | `/api/suggestions` | `{moods, seen_ids?}` → movies |
 | `POST` | `/api/register` · `/api/login` | Account creation and JWT login |
 | `GET` | `/api/<user_id>/library` | Liked and saved films, with details |
-| `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?, dislike?}` |
+| `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?, dislike?, seen?}` |
+| `GET` | `/api/movies/search?q=` · `/api/movies/trending` | Title search · this week's trending films |
+| `GET` | `/api/<user_id>/history` | Recent activity per film |
 | `POST` | `/api/<user_id>/interactions` | Log a view `{movie_id}` |
 | `GET` | `/api/<user_id>/taste` | Learned taste profile and its prompt summary |
 | `GET` | `/api/<user_id>/api-keys` | Which providers use the user's own key (masked) |

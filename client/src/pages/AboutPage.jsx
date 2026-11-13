@@ -37,7 +37,7 @@ function Block({ title, children }) {
 export default function AboutPage() {
   useDocumentTitle('About');
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+    <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 lg:px-8">
       <header className="pb-12">
         <h1 className="max-w-3xl font-display text-display text-ink sm:text-display-lg">
           A film picker that reads the room, and learns your taste.

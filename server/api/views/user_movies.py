@@ -8,7 +8,8 @@ interaction and immediately folded into the user's taste profile.
 
 Routes:
     - GET    /<user_id>/library                  All entries + movie details
-    - PUT    /<user_id>/library/<tmdb_id>        Upsert {like, save, dislike}
+    - PUT    /<user_id>/library/<tmdb_id>        Upsert like/save/dislike/seen
+    - GET    /<user_id>/history                  Recent activity per movie
     - POST   /<user_id>/interactions             Log a view {movie_id}
     - GET    /<user_id>/taste                    Learned taste profile
     - GET    /<user_id>/user_movies              All raw entries
@@ -24,28 +25,33 @@ from api.views import app_views
 from api.views.helpers import (error, json_body, movies_by_tmdb_id,
                                owner_required, request_keys, upsert_movies)
 from models import storage
+from models.interaction import Interaction
 from models.user_movie import User_Movie
 
-FLAGS = ('like', 'save', 'dislike')
+FLAGS = ('like', 'save', 'dislike', 'seen')
 # flag -> (event when set, event when cleared)
 FLAG_EVENTS = {'like': ('like', 'unlike'), 'dislike': ('dislike', 'undislike'),
-               'save': ('save', 'unsave')}
+               'save': ('save', 'unsave'), 'seen': ('seen', 'unseen')}
+
+
+def _movies_with_backfill(tmdb_ids, user=None, limit=20):
+    """{tmdb_id: movie_dict} from the local cache; films missing from it
+    (e.g. rows from the original prototype) are fetched from TMDB once and
+    stored."""
+    movies = movies_by_tmdb_id(tmdb_ids)
+    missing = [i for i in tmdb_ids if i not in movies][:limit]
+    if missing:
+        keys = request_keys(user)["tmdb"]
+        fetched = [m for m in (tmdb.details(i, keys) for i in missing) if m]
+        upsert_movies(fetched)
+        movies.update({m["tmdb_id"]: m for m in fetched})
+    return movies
 
 
 def _with_movies(entries, user=None):
-    """Serialise entries, embedding cached movie details (one query).
-
-    Movies missing from the local cache (e.g. rows created by the original
-    prototype) are fetched from TMDB once and stored.
-    """
-    movies = movies_by_tmdb_id({e.movie_id for e in entries})
-    missing = [e.movie_id for e in entries if e.movie_id not in movies]
-    if missing:
-        key = request_keys(user)["tmdb"]
-        fetched = [m for m in (tmdb.details(i, key) for i in missing[:20])
-                   if m]
-        upsert_movies(fetched)
-        movies.update({m["tmdb_id"]: m for m in fetched})
+    """Serialise entries, embedding movie details (one query, plus a TMDB
+    backfill for anything not cached)."""
+    movies = _movies_with_backfill({e.movie_id for e in entries}, user)
     result = []
     for entry in entries:
         data = entry.to_dict()
@@ -117,7 +123,7 @@ def set_library_flags(tmdb_id, user):
     except ValueError as exc:
         return error(str(exc))
     if not flags:
-        return error('Provide like, save and/or dislike')
+        return error('Provide like, save, dislike and/or seen')
     if flags.get('like') and flags.get('dislike'):
         return error('A movie cannot be both liked and disliked')
     if flags.get('like'):
@@ -128,8 +134,8 @@ def set_library_flags(tmdb_id, user):
     entry = storage.get_specific_double(
         User_Movie, 'user_id', user.id, 'movie_id', tmdb_id)
     if entry is None:
-        entry = User_Movie(user_id=user.id, movie_id=tmdb_id,
-                           like=False, save=False, dislike=False)
+        entry = User_Movie(user_id=user.id, movie_id=tmdb_id, like=False,
+                           save=False, dislike=False, seen=False)
         storage.new(entry)
     for flag, value in flags.items():
         if bool(getattr(entry, flag)) != value:
@@ -137,10 +143,9 @@ def set_library_flags(tmdb_id, user):
                                FLAG_EVENTS[flag][0 if value else 1])
         setattr(entry, flag, value)
 
-    if not entry.like and not entry.save and not entry.dislike:
+    if not any(getattr(entry, flag) for flag in FLAGS):
         storage.delete(entry)
-        result = {'movie_id': tmdb_id, 'like': False, 'save': False,
-                  'dislike': False}
+        result = {'movie_id': tmdb_id, **{flag: False for flag in FLAGS}}
     else:
         result = entry.to_dict()
     storage.save()
@@ -170,6 +175,52 @@ def log_interaction(user):
     profile = _learn(user, [movie_id])
     return jsonify({'recorded': True,
                     'interactions': (profile or {}).get('interactions')}), 201
+
+
+HISTORY_EVENTS = ('recommended', 'view', 'like', 'dislike', 'save', 'seen')
+
+
+@app_views.get('/<user_id>/history')
+@owner_required
+def history(user):
+    """Recent activity, one entry per film (newest first).
+
+    Each entry: {movie_id, movie, last_event, last_at, events: [...],
+    moods: [...]} where ``moods`` are those the film was recommended for.
+    Query: ?limit=1..100 (default 60).
+    """
+    import json
+
+    try:
+        limit = min(max(int(request.args.get('limit', 60)), 1), 100)
+    except ValueError:
+        return error('limit must be an integer')
+    rows = storage.session.query(Interaction).filter(
+        Interaction.user_id == user.id,
+        Interaction.event.in_(HISTORY_EVENTS),
+    ).order_by(Interaction.created_at.desc()).limit(1000).all()
+
+    grouped = {}
+    for row in rows:
+        entry = grouped.get(row.movie_id)
+        if entry is None:
+            if len(grouped) >= limit:
+                continue
+            entry = grouped[row.movie_id] = {
+                'movie_id': row.movie_id, 'last_event': row.event,
+                'last_at': row.created_at.isoformat() + 'Z',
+                'events': [], 'moods': []}
+        if row.event not in entry['events']:
+            entry['events'].append(row.event)
+        if row.event == 'recommended' and row.context and not entry['moods']:
+            try:
+                entry['moods'] = json.loads(row.context).get('moods') or []
+            except ValueError:
+                pass
+    movies = _movies_with_backfill(set(grouped), user)
+    for movie_id, entry in grouped.items():
+        entry['movie'] = movies.get(movie_id)
+    return jsonify(list(grouped.values()))
 
 
 @app_views.get('/<user_id>/taste')

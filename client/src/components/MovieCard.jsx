@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { FiBookmark, FiHeart, FiThumbsDown } from 'react-icons/fi';
+import { FiBookmark, FiCheck, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import { Skeleton } from './ui.jsx';
 
 /** Typographic fallback when a poster is missing: no stock icon. */
@@ -19,6 +19,7 @@ export function Rating({ value, className = '' }) {
     <span className={`num text-accent ${className}`}>
       <span aria-hidden="true">★ </span>
       {value.toFixed(1)}
+      <span className="text-subtle" aria-hidden="true"> / 10</span>
       <span className="sr-only"> out of 10</span>
     </span>
   );
@@ -27,13 +28,15 @@ export function Rating({ value, className = '' }) {
 const ACTIONS = [
   { flag: 'like', icon: FiHeart, on: 'Unlike', off: 'Like', active: 'bg-like text-canvas' },
   { flag: 'save', icon: FiBookmark, on: 'Remove from watchlist', off: 'Add to watchlist', active: 'bg-accent text-accent-ink' },
+  { flag: 'seen', icon: FiCheck, on: 'Mark as not seen', off: 'Mark as seen', active: 'bg-ink text-canvas' },
   { flag: 'dislike', icon: FiThumbsDown, on: 'Undo not for me', off: 'Not for me', active: 'bg-dislike text-canvas' },
 ];
 
-function MovieCard({ movie, liked = false, saved = false, disliked = false, onToggle, onOpen }) {
+function MovieCard({ movie, liked = false, saved = false, disliked = false, seen = false, onToggle, onOpen }) {
   const [imageFailed, setImageFailed] = useState(false);
   const { title, poster, year, rating } = movie;
-  const state = { like: liked, save: saved, dislike: disliked };
+  const genre = Array.isArray(movie.genres) ? movie.genres[0] : null;
+  const state = { like: liked, save: saved, dislike: disliked, seen };
 
   return (
     <article className="group animate-fade-in">
@@ -64,10 +67,11 @@ function MovieCard({ movie, liked = false, saved = false, disliked = false, onTo
         </button>
 
         {/* Persistent state marks: only for states that are on */}
-        {(liked || saved) && (
+        {(liked || saved || seen) && (
           <div className="pointer-events-none absolute left-2 top-2 flex gap-1" aria-hidden="true">
             {liked && <span className="grid h-6 w-6 place-items-center rounded-full bg-canvas/85 text-like"><FiHeart className="h-3.5 w-3.5 fill-current" /></span>}
             {saved && <span className="grid h-6 w-6 place-items-center rounded-full bg-canvas/85 text-accent"><FiBookmark className="h-3.5 w-3.5 fill-current" /></span>}
+            {seen && <span className="grid h-6 w-6 place-items-center rounded-full bg-canvas/85 text-ink"><FiCheck className="h-3.5 w-3.5" /></span>}
           </div>
         )}
 
@@ -99,10 +103,12 @@ function MovieCard({ movie, liked = false, saved = false, disliked = false, onTo
       </div>
 
       <h3 className="mt-3 text-sm font-medium text-ink line-clamp-1">{title}</h3>
-      <p className="num mt-0.5 flex gap-2 text-xs text-muted">
+      <p className="num mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted">
         {year && <span>{year}</span>}
-        <Rating value={rating} />
+        {year && genre && <span aria-hidden="true">·</span>}
+        {genre && <span className="truncate">{genre}</span>}
       </p>
+      <Rating value={rating} className="mt-1 block text-xs" />
     </article>
   );
 }

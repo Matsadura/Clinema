@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
-import { Avatar } from '../components/Navbar.jsx';
+import { Avatar } from '../components/Shell.jsx';
 import { Alert, Button } from '../components/ui.jsx';
 import Modal from '../components/Modal.jsx';
 import TastePanel from '../components/TastePanel.jsx';
@@ -70,7 +70,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+    <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 lg:px-8">
       <header className="flex items-center gap-5 pb-10">
         <Avatar user={user} size="h-14 w-14 text-base" />
         <div className="min-w-0">

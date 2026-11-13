@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /**
- * The signed-in user's liked/saved movies.
+ * The signed-in user's library, shared app-wide through LibraryProvider so
+ * every grid, shelf and the detail drawer see the same state.
  *
- * entries: { [tmdbId]: { like, save, dislike, movie } }
- * toggle(movie, 'like' | 'save' | 'dislike') updates optimistically and
- * rolls back on failure. Like and dislike are mutually exclusive.
- * logView(movie) records a browsing signal for preference learning.
+ * entries: { [tmdbId]: { like, save, dislike, seen, movie } }
+ * toggle(movie, 'like' | 'save' | 'dislike' | 'seen') updates
+ * optimistically and rolls back on failure. Like and dislike are mutually
+ * exclusive. logView(movie) records a browsing signal for taste learning.
  */
-export function useLibrary() {
+function useLibraryState() {
   const { user, isAuthenticated } = useAuth();
   const [entries, setEntries] = useState({});
   const [status, setStatus] = useState('idle');
@@ -33,7 +34,13 @@ export function useLibrary() {
       .then((rows) => {
         const map = {};
         for (const row of rows || []) {
-          map[row.movie_id] = { like: !!row.like, save: !!row.save, dislike: !!row.dislike, movie: row.movie };
+          map[row.movie_id] = {
+            like: !!row.like,
+            save: !!row.save,
+            dislike: !!row.dislike,
+            seen: !!row.seen,
+            movie: row.movie,
+          };
         }
         setEntries(map);
         setStatus('ready');
@@ -52,7 +59,7 @@ export function useLibrary() {
       if (!userId) return false;
       const id = movie.tmdb_id;
       const previous = entriesRef.current[id];
-      const base = previous || { like: false, save: false, dislike: false, movie };
+      const base = previous || { like: false, save: false, dislike: false, seen: false, movie };
       const nextValue = !base[flag];
       const changes = { [flag]: nextValue };
       if (nextValue && flag === 'like') changes.dislike = false;
@@ -92,5 +99,21 @@ export function useLibrary() {
     [userId],
   );
 
-  return { entries, status, error, toggle, logView, reload, clearError: () => setError(null) };
+  const clearError = useCallback(() => setError(null), []);
+  return useMemo(
+    () => ({ entries, status, error, toggle, logView, reload, clearError }),
+    [entries, status, error, toggle, logView, reload, clearError],
+  );
+}
+
+const LibraryContext = createContext(null);
+
+export function LibraryProvider({ children }) {
+  return createElement(LibraryContext.Provider, { value: useLibraryState() }, children);
+}
+
+export function useLibrary() {
+  const ctx = useContext(LibraryContext);
+  if (!ctx) throw new Error('useLibrary must be used inside <LibraryProvider>');
+  return ctx;
 }

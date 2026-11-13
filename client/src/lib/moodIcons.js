@@ -1,0 +1,58 @@
+// Line icons for moods (Tabler, via react-icons): drawn in the UI's ink
+// colour rather than emoji, so they sit with the typography.
+import {
+  TbActivity,
+  TbBolt,
+  TbCloudRain,
+  TbCoffee,
+  TbConfetti,
+  TbCrown,
+  TbEye,
+  TbFeather,
+  TbFlame,
+  TbHeartHandshake,
+  TbMoodAngry,
+  TbMoodCrazyHappy,
+  TbMoodEmpty,
+  TbMoodHappy,
+  TbMoodSad,
+  TbMoon,
+  TbRocket,
+  TbSearch,
+  TbSparkles,
+  TbSunrise,
+  TbTrophy,
+  TbUser,
+  TbWaveSine,
+  TbZzz,
+} from 'react-icons/tb';
+
+export const MOOD_ICONS = {
+  Joyful: TbMoodHappy,
+  Euphoric: TbConfetti,
+  Excited: TbRocket,
+  Enthusiastic: TbFlame,
+  Optimistic: TbSunrise,
+  Hopeful: TbSparkles,
+  Confident: TbCrown,
+  Proud: TbTrophy,
+  Grateful: TbHeartHandshake,
+  Curious: TbSearch,
+  Intrigued: TbEye,
+  Astonished: TbBolt,
+  Surprised: TbMoodCrazyHappy,
+  Calm: TbWaveSine,
+  Serene: TbFeather,
+  Relaxed: TbCoffee,
+  Reflective: TbMoon,
+  Tired: TbZzz,
+  Bored: TbMoodEmpty,
+  Lonely: TbUser,
+  Sad: TbCloudRain,
+  Depressed: TbMoodSad,
+  Stressed: TbActivity,
+  Angry: TbMoodAngry,
+};
+
+/** Shown first in the hero; the rest are one tap away. */
+export const FEATURED_MOODS = ['Joyful', 'Excited', 'Curious', 'Intrigued', 'Calm', 'Reflective', 'Sad', 'Relaxed'];

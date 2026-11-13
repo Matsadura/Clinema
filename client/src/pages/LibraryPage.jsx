@@ -7,6 +7,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 const TABS = [
   { id: 'liked', flag: 'like', label: 'Liked', empty: 'Nothing liked yet.', hint: 'Like a film from any list and it lands here.' },
   { id: 'saved', flag: 'save', label: 'Watchlist', empty: 'Your watchlist is empty.', hint: 'Save films you mean to watch.' },
+  { id: 'seen', flag: 'seen', label: 'Seen', empty: 'Nothing marked as seen.', hint: 'Mark films you’ve watched — they won’t be recommended again.' },
   {
     id: 'hidden',
     flag: 'dislike',
@@ -29,7 +30,7 @@ export default function LibraryPage() {
   const movies = moviesFor(active.flag);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
       <h1 className="font-display text-display text-ink">Library</h1>
 
       <div
@@ -66,7 +67,7 @@ export default function LibraryPage() {
         )}
         {library.status === 'ready' &&
           (movies.length ? (
-            <MovieGrid movies={movies} library={library} />
+            <MovieGrid movies={movies} />
           ) : (
             <EmptyState
               title={active.empty}

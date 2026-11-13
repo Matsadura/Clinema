@@ -2,10 +2,14 @@ import { lazy } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
+import { LibraryProvider } from './hooks/useLibrary.js';
+import { MovieDrawerProvider } from './context/MovieDrawerContext.jsx';
 import DiscoverPage from './pages/DiscoverPage.jsx';
 
 // Secondary pages are code-split so the discovery screen loads fast.
 const LibraryPage = lazy(() => import('./pages/LibraryPage.jsx'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
 const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
@@ -19,12 +23,25 @@ function ToHome() {
 
 export default function App() {
   return (
+    <ThemeProvider>
+      <LibraryProvider>
+        <MovieDrawerProvider>
+          <AppRoutes />
+        </MovieDrawerProvider>
+      </LibraryProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppRoutes() {
+  return (
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<DiscoverPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="auth" element={<AuthPage />} />
         <Route path="library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
+        <Route path="history" element={<RequireAuth><HistoryPage /></RequireAuth>} />
         <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
 
         {/* Legacy URLs */}

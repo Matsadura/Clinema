@@ -1,4 +1,4 @@
-import { FiBookmark, FiExternalLink, FiHeart, FiThumbsDown } from 'react-icons/fi';
+import { FiBookmark, FiCheck, FiExternalLink, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import Modal from './Modal.jsx';
 import { PosterFallback, Rating } from './MovieCard.jsx';
 
@@ -16,15 +16,16 @@ function languageName(code) {
 const ACTIONS = [
   { flag: 'like', icon: FiHeart, label: 'Like', activeLabel: 'Liked', active: 'border-like/50 bg-like/15 text-like' },
   { flag: 'save', icon: FiBookmark, label: 'Watchlist', activeLabel: 'On watchlist', active: 'border-accent/50 bg-accent/15 text-accent' },
+  { flag: 'seen', icon: FiCheck, label: 'Seen', activeLabel: 'Seen', active: 'border-line/30 bg-line/10 text-ink' },
   { flag: 'dislike', icon: FiThumbsDown, label: 'Not for me', activeLabel: 'Not for me', active: 'border-dislike/50 bg-dislike/15 text-dislike' },
 ];
 
 /** Focused detail drawer: everything the card leaves out. */
-export default function MovieDetails({ movie, onClose, liked, saved, disliked, onToggle }) {
+export default function MovieDetails({ movie, onClose, liked, saved, disliked, seen, onToggle }) {
   if (!movie) return null;
   const { title, poster, backdrop, year, rating, description, language, tmdb_id: tmdbId, why, fit, tone, director } = movie;
   const genres = Array.isArray(movie.genres) ? movie.genres.slice(0, 3) : [];
-  const state = { like: liked, save: saved, dislike: disliked };
+  const state = { like: liked, save: saved, dislike: disliked, seen };
   const meta = [year, languageName(language)].filter(Boolean);
 
   return (
@@ -86,7 +87,7 @@ export default function MovieDetails({ movie, onClose, liked, saved, disliked, o
       </div>
 
       {onToggle && (
-        <div className="sticky bottom-0 grid grid-cols-3 gap-2 border-t border-line/[0.08] bg-surface p-4">
+        <div className="sticky bottom-0 grid grid-cols-2 gap-2 border-t border-line/[0.08] bg-surface p-4 sm:grid-cols-4">
           {ACTIONS.map(({ flag, icon: Icon, label, activeLabel, active }) => (
             <button
               key={flag}

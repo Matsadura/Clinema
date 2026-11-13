@@ -70,6 +70,8 @@ Legacy alias with the same response: `POST /movies_by_mood` (`{"mood": [...]}`).
 |---|---|---|
 | GET | `/movies?limit=50&offset=0` | Paginated list (`limit` ≤ 200) |
 | GET | `/movies/<tmdb_id>` | One movie. Fetched from TMDB and cached if unknown. |
+| GET | `/movies/search?q=` | Title search on TMDB (2–100 characters), up to 12 poster-bearing results by popularity; cached for 1 hour. Limited to 60 per minute. |
+| GET | `/movies/trending` | This week's trending films (with posters and backdrops), cached for 1 hour. |
 | POST 🔒 | `/movies` | Cache a movie (`title` and `tmdb_id` required). `409` if it already exists. |
 
 ## Library 🔒
@@ -77,7 +79,8 @@ Legacy alias with the same response: `POST /movies_by_mood` (`{"mood": [...]}`).
 | Method | Path | Description |
 |---|---|---|
 | GET | `/<user_id>/library` | All entries: `[{movie_id, like, save, movie: {...}}]` |
-| PUT | `/<user_id>/library/<tmdb_id>` | Upsert `{"like"?, "save"?, "dislike"?}` (booleans). Like and dislike are mutually exclusive. The entry is removed when all are false. Each change is logged and updates the taste profile. |
+| GET | `/<user_id>/history?limit=60` | Recent activity, one entry per film, newest first: `{movie_id, movie, last_event, last_at, events, moods}` |
+| PUT | `/<user_id>/library/<tmdb_id>` | Upsert `{"like"?, "save"?, "dislike"?, "seen"?}` (booleans). `seen` marks a film as watched (weight +0.5, and it's never recommended again). Like and dislike are mutually exclusive. The entry is removed when all are false. Each change is logged and updates the taste profile. |
 | POST | `/<user_id>/interactions` | Log a browsing signal `{"movie_id": 550, "event": "view"}` (`201`) |
 | GET | `/<user_id>/taste` | `{profile, summary, personalized}`: the learned profile and the text injected into prompts |
 | GET | `/<user_id>/disliked` | Disliked entries, with `movie` details |

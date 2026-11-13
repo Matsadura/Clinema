@@ -228,3 +228,43 @@ def _details(tmdb_id, api_key):
 def details(tmdb_id, api_key):
     """See _details; ``api_key`` may be a list of candidate keys."""
     return _with_keys(_details, api_key, tmdb_id)
+
+
+@TTLMemo(maxsize=1024, ttl=3600)
+def _search_many(query, api_key):
+    params = {"api_key": api_key, "query": query, "include_adult": "false",
+              "page": 1}
+    try:
+        status, body = _get("/search/movie", params, api_key)
+    except requests.RequestException as exc:
+        log.warning("TMDB search failed: %s", redact(exc))
+        return None
+    if status != 200 or not body:
+        return None
+    results = sorted(body.get("results", []),
+                     key=lambda r: r.get("popularity") or 0, reverse=True)
+    return [normalize(r) for r in results if r.get("poster_path")][:12]
+
+
+def search_many(query, api_key):
+    """Up to 12 poster-bearing matches for a free-text query."""
+    return _with_keys(_search_many, api_key, query) or []
+
+
+@TTLMemo(maxsize=8, ttl=3600)
+def _trending(api_key):
+    try:
+        status, body = _get("/trending/movie/week", {"api_key": api_key},
+                            api_key)
+    except requests.RequestException as exc:
+        log.warning("TMDB trending failed: %s", redact(exc))
+        return None
+    if status != 200 or not body:
+        return None
+    return [normalize(r) for r in body.get("results", [])
+            if r.get("poster_path") and r.get("backdrop_path")][:20]
+
+
+def trending(api_key):
+    """This week's trending films (with posters and backdrops)."""
+    return _with_keys(_trending, api_key) or []
