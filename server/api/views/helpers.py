@@ -2,10 +2,12 @@
 """Shared helpers for route handlers."""
 from functools import wraps
 
-from flask import jsonify, request
-from flask_jwt_extended import current_user, jwt_required
+from flask import current_app, g, jsonify, request
+from flask_jwt_extended import (current_user, get_current_user, jwt_required,
+                                verify_jwt_in_request)
 from sqlalchemy.exc import IntegrityError
 
+from api.services import credentials
 from models import storage
 from models.movie import Movie
 
@@ -19,6 +21,26 @@ def json_body():
     """Return the request JSON object, or None if absent/invalid."""
     data = request.get_json(silent=True)
     return data if isinstance(data, dict) else None
+
+
+def optional_user():
+    """The signed-in user if a valid token was sent, else None."""
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_current_user()
+    except Exception:  # noqa: BLE001 - bad/expired token -> anonymous
+        return None
+
+
+def request_keys(user=None):
+    """Candidate API keys per provider for this request: the caller's own
+    key first (if they saved one), then the server's. Cached on ``g``."""
+    if "api_keys" not in g:
+        if user is None:
+            user = optional_user()
+        g.api_keys, g.key_sources = credentials.resolve(
+            current_app.config, user.id if user else None)
+    return g.api_keys
 
 
 def owner_required(view):

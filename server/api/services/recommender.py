@@ -14,7 +14,7 @@ import logging
 import random
 import re
 
-from api.services import ServiceError, llm, taste, tmdb
+from api.services import ServiceError, credentials, llm, taste, tmdb
 from api.services.weather import describe
 
 log = logging.getLogger(__name__)
@@ -146,14 +146,15 @@ class _Picker:
 
 
 def recommend(moods, weather, config, user_id=None, seen_ids=(),
-              rng=random):
+              rng=random, keys=None):
     """Return {"movies", "titles", "source", "personalized"}.
 
     ``source`` is "ai" when the LLM produced the list (possibly topped up
     from TMDB) or "fallback" when only TMDB discovery was used.
     Raises ServiceError if no recommendations can be produced at all.
     """
-    tmdb_key = config.get("TMDB_API_KEY")
+    keys = keys or credentials.server_keys(config)
+    tmdb_key = keys["tmdb"]  # candidate list: user's key, then server's
     if not tmdb_key:
         raise ServiceError("Movie database is not configured")
 
@@ -169,7 +170,7 @@ def recommend(moods, weather, config, user_id=None, seen_ids=(),
         need = picker.target - len(picker.movies)
         try:
             items = llm.suggest_titles(
-                moods, weather_desc, config.get("GROQ_API_KEY"),
+                moods, weather_desc, keys["groq"],
                 config.get("GROQ_MODEL"), config.get("LLM_TIMEOUT", 20),
                 taste=taste_text,
                 exclude=exclusion.for_prompt() + picker.rejected[-20:],

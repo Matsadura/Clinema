@@ -11,6 +11,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from models.api_key import UserApiKey
 from models.base_model import Base
 from models.interaction import Interaction, TasteProfile
 from models.movie import Movie
@@ -20,7 +21,7 @@ from models.user_movie import User_Movie
 log = logging.getLogger(__name__)
 
 classes = {"Movie": Movie, "User_Movie": User_Movie, "User": User,
-           "Interaction": Interaction}
+           "Interaction": Interaction, "UserApiKey": UserApiKey}
 
 
 def database_url_from_env():

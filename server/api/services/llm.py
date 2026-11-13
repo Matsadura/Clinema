@@ -11,6 +11,7 @@ Anti-repetition measures implemented here:
   diversity constraints per request;
 - higher temperature with frequency/presence penalties.
 """
+import hashlib
 import json
 import logging
 import random
@@ -18,13 +19,17 @@ import re
 import threading
 import time
 
+from api.services.credentials import KeyRejected, as_list, report_rejected
+
 log = logging.getLogger(__name__)
 MAX_TITLES = 12
 EXTRA_CANDIDATES = 4   # ask for a few more than needed to absorb filtering
-# After a failure, skip the LLM for this many seconds (circuit breaker) so a
-# dead or slow provider doesn't add latency to every request.
+# After a failure, skip a key for this many seconds (circuit breaker) so a
+# dead or slow provider doesn't add latency to every request. State is per
+# key, so one user's broken key never disables the LLM for anyone else.
 COOLDOWN_SECONDS = 60
-_down_until = 0.0
+REJECTED_COOLDOWN_SECONDS = 3600  # key answered 401/403
+_down_until = {}  # key fingerprint -> monotonic time
 
 SAMPLING = {"temperature": 0.85, "top_p": 0.95,
             "frequency_penalty": 0.4, "presence_penalty": 0.6}
@@ -124,17 +129,25 @@ class LLMError(Exception):
     """The LLM call failed, timed out or returned unusable output."""
 
 
-_client = None
+_clients = {}  # key fingerprint -> Groq client
 _client_lock = threading.Lock()
 
 
+def _fingerprint(api_key):
+    """Stable, non-reversible id for a key (plain keys aren't kept as
+    dictionary keys or logged)."""
+    return hashlib.sha256(api_key.encode()).hexdigest()[:16]
+
+
 def _get_client(api_key, timeout):
-    global _client
+    """One client per API key (a user's key never serves anyone else)."""
+    fingerprint = _fingerprint(api_key)
     with _client_lock:
-        if _client is None:
+        if fingerprint not in _clients:
             from groq import Groq  # imported lazily: heavy import
-            _client = Groq(api_key=api_key, timeout=timeout, max_retries=1)
-        return _client
+            _clients[fingerprint] = Groq(api_key=api_key, timeout=timeout,
+                                         max_retries=1)
+        return _clients[fingerprint]
 
 
 # -- prompt --------------------------------------------------------------
@@ -236,7 +249,9 @@ def parse_titles(content):
 
 # -- models & request options ------------------------------------------------
 DEFAULT_MODELS = "openai/gpt-oss-120b,openai/gpt-oss-20b"
-# Models Groq reported as missing/retired; skipped for the process lifetime.
+# (key fingerprint, model) pairs Groq reported as missing or not accessible;
+# skipped for the process lifetime. Per key: one account lacking access to a
+# model must not hide it from everyone else.
 _unavailable_models = set()
 # Per-model request features the provider rejected ("schema", "penalties")
 _unsupported = {}
@@ -326,14 +341,17 @@ def _complete(client, model, messages):
 
 def _generate(messages, api_key, models, timeout):
     client = _get_client(api_key, timeout)
+    fingerprint = _fingerprint(api_key)
     for model in models:
-        if model in _unavailable_models:
+        if (fingerprint, model) in _unavailable_models:
             continue
         try:
             content = _complete(client, model, messages)
         except Exception as exc:  # noqa: BLE001
+            if _status(exc) in (401, 403):
+                raise KeyRejected("groq", api_key)
             if _is_model_missing(exc):
-                _unavailable_models.add(model)
+                _unavailable_models.add((fingerprint, model))
                 log.error("Groq model %r is unavailable; trying the next "
                           "one. Update GROQ_MODEL.", model)
                 continue
@@ -352,15 +370,15 @@ def suggest_titles(moods, weather_desc, api_key, model, timeout=20,
                    taste="", exclude=(), count=MAX_TITLES, focus=None):
     """Return a list of validated movie items; raise LLMError on failure.
 
-    ``taste`` is the viewer's profile summary, ``exclude`` a list of titles
-    that must not be suggested, ``focus`` the diversity constraints (chosen
-    at random when None). Results are deliberately not cached.
+    ``api_key`` is a key or an ordered list of candidate keys (the user's
+    own key first, then the server's): a rejected, failing or cooling-down
+    key falls through to the next. ``taste`` is the viewer's profile
+    summary, ``exclude`` titles that must not be suggested, ``focus`` the
+    diversity constraints (random when None). Results are not cached.
     """
-    global _down_until
-    if not api_key:
+    keys = as_list(api_key)
+    if not keys:
         raise LLMError("LLM not configured")
-    if time.monotonic() < _down_until:
-        raise LLMError("LLM temporarily disabled after a recent failure")
     focus = pick_focus() if focus is None else focus
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -368,16 +386,32 @@ def suggest_titles(moods, weather_desc, api_key, model, timeout=20,
             list(moods), weather_desc, count + EXTRA_CANDIDATES, taste,
             list(exclude), focus)},
     ]
-    titles = _generate(messages, api_key, parse_models(model), timeout)
-    if not titles:
-        _down_until = time.monotonic() + COOLDOWN_SECONDS
-        raise LLMError("No suggestions from LLM")
-    return titles
+    models = parse_models(model)
+    attempted = False
+    for key in keys:
+        fingerprint = _fingerprint(key)
+        if time.monotonic() < _down_until.get(fingerprint, 0.0):
+            continue
+        attempted = True
+        try:
+            titles = _generate(messages, key, models, timeout)
+        except KeyRejected as exc:
+            log.warning("Groq rejected a key; trying the next one")
+            report_rejected(exc.provider, exc.key)
+            _down_until[fingerprint] = \
+                time.monotonic() + REJECTED_COOLDOWN_SECONDS
+            continue
+        if titles:
+            return titles
+        _down_until[fingerprint] = time.monotonic() + COOLDOWN_SECONDS
+    if not attempted:
+        raise LLMError("LLM temporarily disabled after a recent failure")
+    raise LLMError("No suggestions from LLM")
 
 
 def reset_circuit():
     """Re-enable the LLM immediately (used by tests)."""
-    global _down_until
-    _down_until = 0.0
+    _down_until.clear()
     _unavailable_models.clear()
     _unsupported.clear()
+    _clients.clear()

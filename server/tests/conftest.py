@@ -49,7 +49,6 @@ def clean_state(app):
         storage.drop_all()
     TTLMemo.clear_all()
     llm.reset_circuit()
-    llm._client = None
     yield
     storage.close()
 

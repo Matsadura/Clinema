@@ -56,6 +56,14 @@ def create_app(overrides=None):
         storage.close()
 
     @app.after_request
+    def mark_rejected_keys(response):
+        # A user key the provider rejected stops being tried (falls back
+        # to the server key) and shows as invalid in the profile
+        from api.services.credentials import persist_rejections
+        persist_rejections()
+        return response
+
+    @app.after_request
     def security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
