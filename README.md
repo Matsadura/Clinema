@@ -190,7 +190,8 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
   front of port 8080.
 - **Managed platforms:** the `server/` and `client/` Dockerfiles are independent, so they can run as two services
   on Render, Fly.io, Railway or Cloud Run with a managed MySQL. Set `DATABASE_URL`, and set `API_UPSTREAM` on the
-  web service to the API's internal URL.
+  web service to the API's internal URL. Also set `NGINX_RESOLVER` to that platform's DNS resolver (the default,
+  `127.0.0.11`, is Docker's embedded DNS).
 - Set `TRUSTED_PROXIES` to the number of proxies in front of the API so rate limiting sees real client IPs.
   Compose sets it to `1` for the bundled Nginx.
 - Rate limits are stored in memory per Gunicorn worker by default. Use Redis (`RATELIMIT_STORAGE_URI`) when you

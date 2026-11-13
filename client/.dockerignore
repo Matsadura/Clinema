@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.vite
+**/*.test.js
+**/*.test.jsx
+src/test
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore

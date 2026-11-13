@@ -1,0 +1,13 @@
+# Allow-list: only what the image needs
+**
+!requirements.txt
+!gunicorn.conf.py
+!api
+!api/**
+!models
+!models/**
+**/__pycache__
+**/*.py[cod]
+**/README.md
+**/.env
+**/.env.*

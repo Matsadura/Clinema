@@ -1,0 +1,12 @@
+# Local development override: exposes MySQL on 127.0.0.1:3306 so the Flask
+# API can run on the host (python -m api.app) with hot reload.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+services:
+  db:
+    ports:
+      - "127.0.0.1:3306:3306"
+
+networks:
+  backend:
+    internal: false

@@ -1,50 +1,95 @@
-version: '3.8'
+# Clinema production-style stack:  docker compose up -d --build
+# Configuration comes from ./.env (copy .env.example). No secrets live here.
+name: clinema
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 services:
+  db:
+    <<: *hardening
+    image: mysql:8.4.13
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-clinema}
+      MYSQL_USER: ${MYSQL_USER:-clinema}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - backend
+
   api:
+    <<: *hardening
     build:
-      context: .
-      dockerfile: server/flask.dockerfile
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./server:/movie_name/server
+      context: ./server
+    image: clinema-api:latest
+    # Explicit mapping (instead of env_file) so the API only receives what it
+    # needs — e.g. never the MySQL root password.
     environment:
-      MOVIE_DB_HOST: mysql_db
-      MOVIE_DB_USER: CINEMA_USER
-      MOVIE_DB_PASSWORD: CINEMA_PASSWORD
-      MOVIE_DB_NAME: CINEMA_DB
-      PYTHONPATH: /movie_name
+      APP_ENV: ${APP_ENV:-production}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:?Set OPENWEATHER_API_KEY in .env}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      TMDB_API_KEY: ${TMDB_API_KEY:?Set TMDB_API_KEY in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      JWT_EXPIRES_HOURS: ${JWT_EXPIRES_HOURS:-24}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-20}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      RATELIMIT_STORAGE_URI: ${RATELIMIT_STORAGE_URI:-memory://}
+      DB_HOST: db
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-clinema}
+      MYSQL_USER: ${MYSQL_USER:-clinema}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      TRUSTED_PROXIES: "1"
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     depends_on:
-      - mysql
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+      - frontend
 
-  client:
+  web:
+    <<: *hardening
     build:
-      context: .
-      dockerfile: client/vite.dockerfile
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./client:/movie_name/client
-      - /movie_name/client/node_modules
+      context: ./client
+    image: clinema-web:latest
     environment:
-      - CHOKIDAR_USEPOLLING=true
-    stdin_open: true
-    tty: true
+      API_UPSTREAM: http://api:5000
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101
+    networks:
+      - frontend
 
-  mysql:
-    image: mysql:8.0
-    container_name: mysql_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: CINEMA_DB
-      MYSQL_USER: CINEMA_USER
-      MYSQL_PASSWORD: CINEMA_PASSWORD
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
+networks:
+  frontend: {}
+  # The database is unreachable from outside and has no internet egress
+  backend:
+    internal: true
 
 volumes:
-  mysql_data:
+  db_data: {}
