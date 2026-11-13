@@ -12,15 +12,18 @@ describe('parseMoodParam', () => {
   });
 
   it('caps the number of moods', () => {
-    const all = MOODS.map((m) => m.name).join(',');
+    const all = MOODS.join(',');
     expect(parseMoodParam(all)).toHaveLength(MAX_MOODS);
   });
 });
 
 describe('filterMoods', () => {
-  it('matches names case-insensitively and emoji', () => {
-    expect(filterMoods('CAL').map((m) => m.name)).toEqual(['Calm']);
-    expect(filterMoods('🌊').map((m) => m.name)).toEqual(['Calm']);
+  it('matches names case-insensitively', () => {
+    expect(filterMoods('CAL')).toEqual(['Calm']);
     expect(filterMoods('   ')).toHaveLength(MOODS.length);
+  });
+
+  it('contains plain words only (no emoji)', () => {
+    expect(MOODS.every((m) => /^[A-Za-z]+$/.test(m))).toBe(true);
   });
 });

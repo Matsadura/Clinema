@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 const GRID = 'grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
 
+
 export function MovieGridSkeleton({ count = 12 }) {
   return (
     <div className={GRID} aria-busy="true" aria-label="Loading movies">
@@ -18,7 +19,7 @@ export function MovieGridSkeleton({ count = 12 }) {
 }
 
 /**
- * Responsive poster grid with a details modal and like/save actions.
+ * Responsive poster grid with a detail drawer and like/save/dismiss actions.
  * `library` is the return value of useLibrary() (optional).
  */
 export default function MovieGrid({ movies, library }) {
@@ -51,7 +52,7 @@ export default function MovieGrid({ movies, library }) {
   return (
     <>
       {library?.error && (
-        <Alert tone="warning" className="mb-6" title="Couldn't update your library">
+        <Alert className="mb-6" title="Couldn't update your library.">
           {library.error}
         </Alert>
       )}

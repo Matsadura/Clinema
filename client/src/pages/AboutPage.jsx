@@ -1,7 +1,20 @@
-import { VscGithub } from 'react-icons/vsc';
-import HowItWorks from '../components/HowItWorks.jsx';
 import { REPO_URL } from '../components/Footer.jsx';
+import { textLink } from '../components/ui.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+
+const STEPS = [
+  ['Pick a mood', 'Choose up to six, from joyful to reflective.'],
+  ['An AI curator drafts a list', 'An open-weight model on Groq suggests varied, less obvious films that fit — never the same list twice.'],
+  ['Every pick is checked', 'Titles are matched on TMDB for posters, ratings and synopses, with a note on why each was chosen.'],
+  ['It learns your taste', 'Like, save or dismiss films and Clinema weighs the genres, directors and eras you return to — and what to avoid.'],
+];
+
+const STACK = [
+  ['Frontend', 'React 18, React Router, Vite, Tailwind CSS'],
+  ['Backend', 'Flask 3, SQLAlchemy 2, Alembic, JWT, Gunicorn'],
+  ['Data & AI', 'Groq (GPT-OSS 120B), TMDB, MySQL 8'],
+  ['Operations', 'Docker multi-stage images, Nginx, Pytest, Vitest'],
+];
 
 const TEAM = [
   { name: 'Ali JBARI', github: 'ila36IX', avatar: 104344010 },
@@ -12,98 +25,87 @@ const TEAM = [
   { name: 'Zidane ZAOUI', github: 'matsadura', avatar: 132571698 },
 ];
 
-const STACK = [
-  { group: 'Frontend', items: ['React 18', 'React Router', 'Vite', 'Tailwind CSS'] },
-  { group: 'Backend', items: ['Flask 3', 'SQLAlchemy 2', 'JWT auth', 'Gunicorn'] },
-  { group: 'Data & AI', items: ['Groq · GPT-OSS 120B', 'TMDB API', 'Taste profiles', 'MySQL 8'] },
-  { group: 'Ops', items: ['Docker multi-stage', 'Nginx', 'Compose healthchecks', 'Pytest · Vitest'] },
-];
-
-const FLOW = ['Browser (React SPA)', 'Nginx', 'Flask API', 'Groq · TMDB', 'MySQL'];
+function Block({ title, children }) {
+  return (
+    <section className="grid gap-6 border-t border-line/[0.08] py-12 md:grid-cols-[200px_1fr] md:gap-12">
+      <h2 className="label pt-1">{title}</h2>
+      <div className="min-w-0">{children}</div>
+    </section>
+  );
+}
 
 export default function AboutPage() {
-  useDocumentTitle('How it works');
+  useDocumentTitle('About');
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-      <header className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-wider text-primary-light">About Clinema</p>
-        <h1 className="mt-2 text-4xl font-extrabold sm:text-5xl">A movie picker that reads the room — and learns your taste.</h1>
-        <p className="mt-5 text-lg text-white/70">
-          Choosing a film is harder than watching one. Tell Clinema how you feel and an AI curator suggests films that
-          suit the moment, enriched with real data from TMDB. Every like and dismiss refines a taste profile, so the
-          picks get more personal — and never repeat.
+    <div className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+      <header className="pb-12">
+        <h1 className="max-w-3xl font-display text-display text-ink sm:text-display-lg">
+          A film picker that reads the room, and learns your taste.
+        </h1>
+        <p className="mt-6 max-w-prose text-lg leading-relaxed text-muted">
+          Choosing a film is harder than watching one. Tell Clinema how you feel and an AI curator suggests films for
+          the moment. Every like and dismissal refines a taste profile, so the next list is more yours, and never a
+          repeat.
         </p>
       </header>
 
-      <section className="mt-14" aria-labelledby="how-heading">
-        <h2 id="how-heading" className="text-2xl font-bold">How it works</h2>
-        <div className="mt-6">
-          <HowItWorks />
-        </div>
-      </section>
+      <Block title="How it works">
+        <ol className="space-y-6">
+          {STEPS.map(([title, body], i) => (
+            <li key={title} className="grid grid-cols-[2rem_1fr] gap-2">
+              <span className="num font-display text-2xl leading-none text-accent">{i + 1}</span>
+              <div>
+                <h3 className="font-medium text-ink">{title}</h3>
+                <p className="mt-1 max-w-prose text-muted">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Block>
 
-      <section className="mt-14 grid gap-8 lg:grid-cols-2" aria-labelledby="arch-heading">
-        <div>
-          <h2 id="arch-heading" className="text-2xl font-bold">Architecture</h2>
-          <p className="mt-3 text-white/70">
-            The React app is served by Nginx, which also proxies <code className="rounded bg-white/10 px-1">/api</code> to
-            a Flask API running under Gunicorn. API keys never reach the browser: the API calls Groq and TMDB server-side,
-            blends in your learned taste profile, and falls back to genre-based TMDB discovery if the AI is unavailable.
-          </p>
-          <ol className="mt-6 flex flex-wrap items-center gap-2 text-sm">
-            {FLOW.map((step, i) => (
-              <li key={step} className="flex items-center gap-2">
-                <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">{step}</span>
-                {i < FLOW.length - 1 && <span className="text-white/30" aria-hidden="true">→</span>}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {STACK.map(({ group, items }) => (
-            <div key={group} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50">{group}</h3>
-              <ul className="mt-3 space-y-1.5 text-sm">
-                {items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+      <Block title="Architecture">
+        <p className="max-w-prose text-muted">
+          Nginx serves the React app and proxies <code className="text-ink">/api</code> to a Flask API under Gunicorn.
+          Provider keys never reach the browser: the API calls Groq and TMDB server-side, blends in your taste
+          profile, and falls back to genre-based TMDB discovery if the AI is unavailable.
+        </p>
+        <dl className="mt-8 border-t border-line/[0.06]">
+          {STACK.map(([group, items]) => (
+            <div key={group} className="grid gap-1 border-b border-line/[0.06] py-3 sm:grid-cols-[140px_1fr] sm:gap-4">
+              <dt className="text-sm text-subtle">{group}</dt>
+              <dd className="text-sm text-ink">{items}</dd>
             </div>
           ))}
-        </div>
-      </section>
+        </dl>
+      </Block>
 
-      <section className="mt-14" aria-labelledby="team-heading">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 id="team-heading" className="text-2xl font-bold">The team</h2>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-primary-light hover:underline">
-            <VscGithub aria-hidden="true" /> View the source
-          </a>
-        </div>
-        <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <Block title="Team">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {TEAM.map((person) => (
             <li key={person.name}>
-              <a
-                href={`https://github.com/${person.github}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center transition hover:-translate-y-1 hover:border-primary/50"
-              >
+              <a href={`https://github.com/${person.github}`} target="_blank" rel="noreferrer" className="group flex items-center gap-3">
                 <img
-                  src={`https://avatars.githubusercontent.com/u/${person.avatar}?v=4&s=160`}
+                  src={`https://avatars.githubusercontent.com/u/${person.avatar}?v=4&s=80`}
                   alt=""
-                  width="80"
-                  height="80"
+                  width="40"
+                  height="40"
                   loading="lazy"
-                  className="h-20 w-20 rounded-full bg-secondary-light"
+                  className="h-10 w-10 rounded-full bg-surface grayscale transition duration-200 group-hover:grayscale-0"
                 />
-                <span className="mt-3 text-sm font-semibold">{person.name}</span>
-                <span className="mt-0.5 text-xs text-white/50">@{person.github}</span>
+                <span>
+                  <span className="block text-sm text-ink">{person.name}</span>
+                  <span className="block text-xs text-subtle">@{person.github}</span>
+                </span>
               </a>
             </li>
           ))}
         </ul>
-      </section>
+        <p className="mt-8 text-sm">
+          <a href={REPO_URL} target="_blank" rel="noreferrer" className={textLink}>
+            Read the source on GitHub
+          </a>
+        </p>
+      </Block>
     </div>
   );
 }

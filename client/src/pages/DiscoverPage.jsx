@@ -1,96 +1,82 @@
-import { Link, useSearchParams } from 'react-router-dom';
-import { FiArrowLeft, FiFilm, FiRefreshCw, FiStar } from 'react-icons/fi';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FiRotateCw } from 'react-icons/fi';
+import MoodBar from '../components/MoodBar.jsx';
 import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
 import { Alert, Button, EmptyState } from '../components/ui.jsx';
 import { useSuggestions } from '../hooks/useSuggestions.js';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-import { MOODS, parseMoodParam } from '../lib/moods.js';
+import { parseMoodParam } from '../lib/moods.js';
 
-const EMOJI = Object.fromEntries(MOODS.map((m) => [m.name, m.emoji]));
+/** One readout for the result set: moods, count and how it was made. */
+function ResultsHeader({ moods, status, data, onRefresh }) {
+  const ready = status === 'success';
+  const meta = [];
+  if (ready) {
+    meta.push(`${data.movies.length} films`);
+    if (data.personalized) meta.push('tuned to your taste');
+    if (data.source === 'fallback') meta.push('AI curator unavailable — popular picks');
+  }
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line/[0.08] pb-4">
+      <div>
+        <h2 className="font-display text-display-sm text-ink">{moods.join(' · ')}</h2>
+        <p className="num mt-1 text-sm text-muted" aria-live="polite">
+          {ready ? meta.join(' · ') : status === 'error' ? 'Something went wrong' : 'Curating films…'}
+        </p>
+      </div>
+      {ready && data.movies.length > 0 && (
+        <Button variant="ghost" size="sm" onClick={onRefresh}>
+          <FiRotateCw aria-hidden="true" /> Different picks
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function DiscoverPage() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const moods = parseMoodParam(params.get('moods'));
   const library = useLibrary();
-  useDocumentTitle(moods.length ? `${moods.join(', ')} picks` : 'Your picks');
+  const result = useSuggestions({ moods, enabled: moods.length > 0 });
+  useDocumentTitle(moods.length ? moods.join(', ') : null);
 
-  const nothingRequested = !moods.length;
-  const result = useSuggestions({ moods, enabled: !nothingRequested });
+  const search = (next) => navigate(`/?${new URLSearchParams({ moods: next.join(',') })}`);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <Link to="/#mood" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white">
-        <FiArrowLeft aria-hidden="true" /> Change mood
-      </Link>
-
-      <header className="mb-10 mt-4">
-        <h1 className="text-3xl font-extrabold sm:text-4xl">Your picks</h1>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {moods.map((m) => (
-            <span key={m} className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-sm font-medium text-primary-light">
-              <span aria-hidden="true">{EMOJI[m]}</span> {m}
-            </span>
-          ))}
-          {result.data?.personalized && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-sm font-medium text-amber-200">
-              <FiStar aria-hidden="true" /> Personalised for you
-            </span>
-          )}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="pb-10 pt-12 sm:pt-16">
+        <h1 className="font-display text-display text-ink sm:text-display-lg">What do you want to feel tonight?</h1>
+        <p className="mt-3 max-w-prose text-muted">
+          Pick up to six moods. Every like and dismiss tunes the next list to your taste.
+        </p>
+        <div className="mt-8">
+          <MoodBar value={moods} onSubmit={search} busy={result.status === 'loading'} />
         </div>
-      </header>
+      </section>
 
-      {nothingRequested && (
-        <EmptyState icon={FiFilm} title="Nothing to match yet" action={<Link to="/#mood" className="rounded-xl bg-primary px-5 py-2.5 font-semibold">Pick a mood</Link>}>
-          Choose at least one mood to get recommendations.
-        </EmptyState>
-      )}
+      {moods.length > 0 && (
+        <section aria-label="Recommendations" className="scroll-mt-20">
+          <ResultsHeader moods={moods} status={result.status} data={result.data} onRefresh={result.refresh} />
 
-      {!nothingRequested && (
-        <>
           {result.status === 'error' && (
-            <Alert title="We couldn't get recommendations" onRetry={result.retry}>
+            <Alert title="We couldn't get recommendations." onRetry={result.retry}>
               {result.error?.message}
             </Alert>
           )}
 
-          {(result.status === 'loading' || result.status === 'idle') && (
-            <div>
-              <p className="mb-6 flex items-center gap-2 text-sm text-white/60" aria-live="polite">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary-light" aria-hidden="true" />
-                Curating films for you — this can take a few seconds…
-              </p>
-              <MovieGridSkeleton count={12} />
-            </div>
-          )}
+          {(result.status === 'loading' || result.status === 'idle') && <MovieGridSkeleton count={12} />}
 
-          {result.status === 'success' && (
-            <>
-              {result.data.source === 'fallback' && (
-                <Alert tone="info" className="mb-6">
-                  Our AI curator is unavailable right now, so these are popular films that suit your selection.
-                </Alert>
-              )}
-              {result.data.movies.length ? (
-                <>
-                  <MovieGrid movies={result.data.movies} library={library} />
-                  <div className="mt-12 flex flex-col items-center gap-2 text-center">
-                    <Button variant="outline" onClick={result.refresh}>
-                      <FiRefreshCw aria-hidden="true" /> Show different picks
-                    </Button>
-                    <p className="text-xs text-white/50">
-                      You won&apos;t see these films again. Like or dismiss a few to teach Clinema your taste.
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <EmptyState icon={FiFilm} title="No matches found" action={<Button onClick={result.retry}>Try again</Button>}>
-                  We couldn&apos;t match any films this time. Try a different combination of moods.
-                </EmptyState>
-              )}
-            </>
-          )}
-        </>
+          {result.status === 'success' &&
+            (result.data.movies.length ? (
+              <MovieGrid movies={result.data.movies} library={library} />
+            ) : (
+              <EmptyState title="No matches this time." action={<Button variant="secondary" onClick={result.retry}>Try again</Button>}>
+                Try a different combination of moods.
+              </EmptyState>
+            ))}
+        </section>
       )}
     </div>
   );

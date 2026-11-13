@@ -1,41 +1,43 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiBookmark, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
-import { Alert, EmptyState } from '../components/ui.jsx';
+import { Alert, EmptyState, textLink } from '../components/ui.jsx';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const TABS = [
-  { id: 'liked', flag: 'like', label: 'Liked', icon: FiHeart, empty: "You haven't liked any films yet." },
-  { id: 'saved', flag: 'save', label: 'Watchlist', icon: FiBookmark, empty: 'Your watchlist is empty.' },
-  { id: 'hidden', flag: 'dislike', label: 'Not for me', icon: FiThumbsDown, empty: "You haven't dismissed any films." },
+  { id: 'liked', flag: 'like', label: 'Liked', empty: 'Nothing liked yet.', hint: 'Like a film from any list and it lands here.' },
+  { id: 'saved', flag: 'save', label: 'Watchlist', empty: 'Your watchlist is empty.', hint: 'Save films you mean to watch.' },
+  {
+    id: 'hidden',
+    flag: 'dislike',
+    label: 'Not for me',
+    empty: 'Nothing dismissed.',
+    hint: 'Dismissed films teach Clinema what to avoid. Undo any of them here.',
+  },
 ];
-const HINT = {
-  like: 'Tap the heart on any recommendation to add it here.',
-  save: 'Tap the bookmark on any recommendation to add it here.',
-  dislike: 'Films you mark "not for me" teach Clinema what to avoid. Undo any of them here.',
-};
 
 export default function LibraryPage() {
   const [params, setParams] = useSearchParams();
   const active = TABS.find((t) => t.id === params.get('tab')) || TABS[0];
   const library = useLibrary();
-  useDocumentTitle('My library');
+  useDocumentTitle('Library');
 
   const moviesFor = (flag) =>
     Object.entries(library.entries)
       .filter(([, e]) => e[flag])
       .map(([id, e]) => e.movie || { tmdb_id: Number(id), title: `Movie #${id}` });
-
   const movies = moviesFor(active.flag);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-extrabold sm:text-4xl">My library</h1>
+    <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+      <h1 className="font-display text-display text-ink">Library</h1>
 
-      <div role="tablist" aria-label="Library" className="mt-6 inline-flex max-w-full overflow-x-auto rounded-xl bg-white/5 p-1">
+      <div
+        role="tablist"
+        aria-label="Library"
+        className="mt-8 flex gap-8 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_rgb(var(--line)/0.08)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {TABS.map((tab) => {
-          const Icon = tab.icon;
           const selected = tab.id === active.id;
           return (
             <button
@@ -44,21 +46,21 @@ export default function LibraryPage() {
               type="button"
               aria-selected={selected}
               onClick={() => setParams({ tab: tab.id }, { replace: true })}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-primary text-white' : 'text-white/70 hover:text-white'}`}
+              className={`relative shrink-0 pb-3 text-sm transition-colors duration-150 ${
+                selected ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-accent' : 'text-muted hover:text-ink'
+              }`}
             >
-              <Icon aria-hidden="true" /> {tab.label}
-              {library.status === 'ready' && (
-                <span className={`rounded-full px-2 text-xs ${selected ? 'bg-white/20' : 'bg-white/10'}`}>{moviesFor(tab.flag).length}</span>
-              )}
+              {tab.label}
+              {library.status === 'ready' && <span className="num ml-2 text-subtle">{moviesFor(tab.flag).length}</span>}
             </button>
           );
         })}
       </div>
 
-      <div role="tabpanel" className="mt-10">
+      <div role="tabpanel" className="mt-8">
         {library.status === 'loading' && <MovieGridSkeleton count={6} />}
         {library.status === 'error' && !Object.keys(library.entries).length && (
-          <Alert title="Couldn't load your library" onRetry={library.reload}>
+          <Alert title="Couldn't load your library." onRetry={library.reload}>
             {library.error}
           </Alert>
         )}
@@ -67,15 +69,14 @@ export default function LibraryPage() {
             <MovieGrid movies={movies} library={library} />
           ) : (
             <EmptyState
-              icon={active.icon}
               title={active.empty}
               action={
-                <Link to="/#mood" className="rounded-xl bg-primary px-5 py-2.5 font-semibold hover:bg-primary-light">
+                <Link to="/" className={textLink}>
                   Find something to watch
                 </Link>
               }
             >
-              {HINT[active.flag]}
+              {active.hint}
             </EmptyState>
           ))}
       </div>

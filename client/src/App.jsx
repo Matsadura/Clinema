@@ -1,30 +1,35 @@
 import { lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
-import HomePage from './pages/HomePage.jsx';
+import DiscoverPage from './pages/DiscoverPage.jsx';
 
-// Secondary pages are code-split so the landing page loads fast.
-const DiscoverPage = lazy(() => import('./pages/DiscoverPage.jsx'));
+// Secondary pages are code-split so the discovery screen loads fast.
 const LibraryPage = lazy(() => import('./pages/LibraryPage.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
 const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
 
+/** /discover used to be a separate results page; it now lives on "/". */
+function ToHome() {
+  const { search } = useLocation();
+  return <Navigate to={`/${search}`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="discover" element={<DiscoverPage />} />
+        <Route index element={<DiscoverPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="auth" element={<AuthPage />} />
         <Route path="library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
         <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
 
-        {/* Legacy URLs from the first version of the app */}
-        <Route path="AllMovies" element={<Navigate to="/discover" replace />} />
+        {/* Legacy URLs */}
+        <Route path="discover" element={<ToHome />} />
+        <Route path="AllMovies" element={<Navigate to="/" replace />} />
         <Route path="liked-movies" element={<Navigate to="/library?tab=liked" replace />} />
         <Route path="saved-movies" element={<Navigate to="/library?tab=saved" replace />} />
         <Route path="users/profile" element={<Navigate to="/profile" replace />} />
