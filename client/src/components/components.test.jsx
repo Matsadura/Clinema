@@ -1,70 +1,88 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import MoodPicker from './MoodPicker.jsx';
+import MoodBar from './MoodBar.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import MovieCard from './MovieCard.jsx';
 import { MAX_MOODS, MOODS } from '../lib/moods.js';
 
-describe('MoodPicker', () => {
+describe('MoodBar', () => {
   it('requires a mood, then submits the selection', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    render(<MoodPicker onSubmit={onSubmit} />);
+    render(<MoodBar onSubmit={onSubmit} />);
 
-    const submit = screen.getByRole('button', { name: 'Match my mood' });
+    const submit = screen.getByRole('button', { name: 'Find films' });
     expect(submit).toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: /Calm/ }));
-    await user.click(screen.getByRole('button', { name: /Curious/ }));
-    expect(screen.getByRole('button', { name: /Calm/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Calm' }));
+    await user.click(screen.getByRole('button', { name: 'Curious' }));
+    expect(screen.getByRole('button', { name: 'Calm' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/2\/6/)).toBeInTheDocument();
 
     await user.click(submit);
-    expect(onSubmit).toHaveBeenCalledWith({ moods: ['Calm', 'Curious'] });
+    expect(onSubmit).toHaveBeenCalledWith(['Calm', 'Curious']);
   });
 
-  it('filters moods by search and enforces the selection limit', async () => {
+  it('enforces the limit, filters, and clears', async () => {
     const user = userEvent.setup();
-    render(<MoodPicker onSubmit={vi.fn()} />);
+    render(<MoodBar onSubmit={vi.fn()} />);
 
     for (const mood of MOODS.slice(0, MAX_MOODS)) {
-      await user.click(screen.getByRole('button', { name: mood.name }));
+      await user.click(screen.getByRole('button', { name: mood }));
     }
-    expect(screen.getByText(`${MAX_MOODS} selected (max ${MAX_MOODS})`)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: MOODS[MAX_MOODS].name })).toBeDisabled();
+    expect(screen.getByRole('button', { name: MOODS[MAX_MOODS] })).toBeDisabled();
 
-    await user.type(screen.getByLabelText('Search moods'), 'zzz');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByRole('button', { name: 'Find films' })).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Filter moods'), 'zzz');
     expect(screen.getByText(/No moods match/)).toBeInTheDocument();
   });
 
-  it('offers a single mood-only action', () => {
-    render(<MoodPicker onSubmit={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: /weather/i })).not.toBeInTheDocument();
+  it('starts from the current search, leads with it, and only submits changes', async () => {
+    const user = userEvent.setup();
+    render(<MoodBar value={['Sad', 'Calm']} onSubmit={vi.fn()} />);
+
+    const pressed = screen.getAllByRole('button', { pressed: true });
+    expect(pressed.map((c) => c.textContent)).toEqual(['Sad', 'Calm']);
+    expect(screen.getByRole('group', { name: 'Moods' }).firstChild).toHaveTextContent('Sad');
+
+    const submit = screen.getByRole('button', { name: 'Find films' });
+    expect(submit).toBeDisabled(); // identical to what's already shown
+    await user.click(screen.getByRole('button', { name: 'Tired' }));
+    expect(submit).toBeEnabled();
+  });
+
+  it('uses no emoji in mood labels', () => {
+    render(<MoodBar onSubmit={vi.fn()} />);
+    const text = screen.getByRole('group', { name: 'Moods' }).textContent;
+    expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });
 
 describe('MovieCard', () => {
   const movie = { tmdb_id: 1, title: 'Heat', year: 1995, rating: 8.3, poster: null };
 
-  it('renders details and toggles flags without opening the card', async () => {
+  it('shows only title, year and rating, and toggles without opening', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     const onOpen = vi.fn();
     render(<MovieCard movie={movie} liked onToggle={onToggle} onOpen={onOpen} />);
 
-    expect(screen.getByText('1995')).toBeInTheDocument();
-    expect(screen.getByText('8.3')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Unlike Heat' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Heat' })).toBeInTheDocument();
+    expect(screen.getByText(/8\.3/)).toHaveTextContent('8.3 out of 10');
+    expect(screen.getByRole('button', { name: 'Unlike: Heat' })).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(screen.getByRole('button', { name: 'Save Heat to watchlist' }));
+    await user.click(screen.getByRole('button', { name: 'Add to watchlist: Heat' }));
     expect(onToggle).toHaveBeenCalledWith(movie, 'save');
     expect(onOpen).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: /Heat \(1995\)/ }));
+    await user.click(screen.getByRole('button', { name: 'Heat (1995), view details' }));
     expect(onOpen).toHaveBeenCalledWith(movie);
   });
 
-  it('offers a "not for me" action and marks dismissed films', async () => {
+  it('offers "not for me" and reflects dismissed films', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     const { rerender } = render(<MovieCard movie={movie} onToggle={onToggle} />);
@@ -72,8 +90,7 @@ describe('MovieCard', () => {
     expect(onToggle).toHaveBeenCalledWith(movie, 'dislike');
 
     rerender(<MovieCard movie={movie} disliked onToggle={onToggle} />);
-    expect(screen.getByText('Not for me')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Undo "not for me" on Heat' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Undo not for me: Heat' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

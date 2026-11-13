@@ -3,7 +3,9 @@
 import { FiRotateCw } from 'react-icons/fi';
 
 const BUTTON_VARIANTS = {
-  primary: 'bg-accent text-accent-ink hover:bg-accent-strong',
+  // Disabled primary turns neutral instead of a muddy translucent amber
+  primary:
+    'bg-accent text-accent-ink hover:bg-accent-strong disabled:bg-surface disabled:text-subtle disabled:opacity-100',
   secondary: 'border border-line/[0.14] bg-surface text-ink hover:bg-surface-hover',
   ghost: 'text-muted hover:bg-surface hover:text-ink',
   danger: 'border border-dislike/40 text-dislike hover:bg-dislike/10',

@@ -9,7 +9,7 @@ const PANELS = {
   // Detail drawer: right-hand panel on desktop, bottom sheet on mobile
   drawer:
     'absolute inset-x-0 bottom-0 max-h-[92vh] animate-sheet-up overflow-y-auto rounded-t-lg border-t border-line/[0.08] bg-surface ' +
-    'sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(560px,100vw)] sm:animate-slide-in sm:rounded-none sm:border-l sm:border-t-0',
+    'sm:inset-y-0 sm:left-auto sm:right-0 sm:flex sm:max-h-none sm:w-[min(560px,100vw)] sm:flex-col sm:animate-slide-in sm:rounded-none sm:border-l sm:border-t-0',
 };
 
 /** Accessible modal: Escape/overlay close, focus trap and restore,
