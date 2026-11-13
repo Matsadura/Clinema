@@ -2,6 +2,9 @@ import { lazy } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
+import { LibraryProvider } from './hooks/useLibrary.js';
+import { MovieDrawerProvider } from './context/MovieDrawerContext.jsx';
 import DiscoverPage from './pages/DiscoverPage.jsx';
 
 // Secondary pages are code-split so the discovery screen loads fast.
@@ -18,6 +21,18 @@ function ToHome() {
 }
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <LibraryProvider>
+        <MovieDrawerProvider>
+          <AppRoutes />
+        </MovieDrawerProvider>
+      </LibraryProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>

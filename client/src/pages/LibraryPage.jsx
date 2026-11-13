@@ -66,7 +66,7 @@ export default function LibraryPage() {
         )}
         {library.status === 'ready' &&
           (movies.length ? (
-            <MovieGrid movies={movies} library={library} />
+            <MovieGrid movies={movies} />
           ) : (
             <EmptyState
               title={active.empty}

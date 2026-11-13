@@ -4,7 +4,6 @@ import MoodBar from '../components/MoodBar.jsx';
 import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
 import { Alert, Button, EmptyState } from '../components/ui.jsx';
 import { useSuggestions } from '../hooks/useSuggestions.js';
-import { useLibrary } from '../hooks/useLibrary.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { parseMoodParam } from '../lib/moods.js';
 
@@ -38,7 +37,6 @@ export default function DiscoverPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const moods = parseMoodParam(params.get('moods'));
-  const library = useLibrary();
   const result = useSuggestions({ moods, enabled: moods.length > 0 });
   useDocumentTitle(moods.length ? moods.join(', ') : null);
 
@@ -70,7 +68,7 @@ export default function DiscoverPage() {
 
           {result.status === 'success' &&
             (result.data.movies.length ? (
-              <MovieGrid movies={result.data.movies} library={library} />
+              <MovieGrid movies={result.data.movies} />
             ) : (
               <EmptyState title="No matches this time." action={<Button variant="secondary" onClick={result.retry}>Try again</Button>}>
                 Try a different combination of moods.

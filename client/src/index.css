@@ -30,17 +30,42 @@
   --dislike: 210 115 92;        /* #D2735C terracotta     5.8:1 */
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --scheme: dark;
+}
+
+/*
+ * Light theme ("matinée"): warm paper instead of charcoal. Accent and
+ * feedback colours are darkened so text stays AA (ratios vs canvas).
+ */
+:root[data-theme='light'] {
+  --canvas: 246 243 236;        /* #F6F3EC */
+  --raised: 255 255 255;        /* #FFFFFF */
+  --surface: 239 235 226;       /* #EFEBE2 */
+  --surface-hover: 229 224 213; /* #E5E0D5 */
+  --line: 23 24 28;             /* hairlines are dark on paper */
+
+  --ink: 23 24 28;              /* #17181C 16.0:1 */
+  --muted: 74 80 92;            /* #4A505C  7.3:1 */
+  --subtle: 94 100 112;         /* #5E6470  5.4:1 */
+
+  --accent: 140 86 0;           /* #8C5600  5.5:1 */
+  --accent-strong: 117 72 0;    /* #754800 */
+  --accent-ink: 255 255 255;    /* white on amber 6.1:1 */
+
+  --like: 42 112 80;            /* #2A7050  5.4:1 */
+  --dislike: 169 71 47;         /* #A9472F  5.2:1 */
+  --scheme: light;
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: var(--scheme);
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-canvas font-sans text-ink antialiased;
+    @apply bg-canvas font-sans text-ink antialiased transition-colors duration-200;
     font-feature-settings: 'cv11', 'ss01';
   }
 
