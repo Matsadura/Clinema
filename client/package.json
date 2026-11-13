@@ -37,7 +37,7 @@
     "vite": "^7.3.8",
     "vitest": "^4.1.12"
   },
-  "description": "Clinema — AI movie recommendations from your mood and local weather",
+  "description": "Clinema — AI movie recommendations from your mood, tuned to your taste",
   "engines": {
     "node": ">=20.19"
   }
