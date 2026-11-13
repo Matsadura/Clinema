@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiBookmark, FiHeart } from 'react-icons/fi';
+import { FiBookmark, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
 import { Alert, EmptyState } from '../components/ui.jsx';
 import { useLibrary } from '../hooks/useLibrary.js';
@@ -8,7 +8,13 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 const TABS = [
   { id: 'liked', flag: 'like', label: 'Liked', icon: FiHeart, empty: "You haven't liked any films yet." },
   { id: 'saved', flag: 'save', label: 'Watchlist', icon: FiBookmark, empty: 'Your watchlist is empty.' },
+  { id: 'hidden', flag: 'dislike', label: 'Not for me', icon: FiThumbsDown, empty: "You haven't dismissed any films." },
 ];
+const HINT = {
+  like: 'Tap the heart on any recommendation to add it here.',
+  save: 'Tap the bookmark on any recommendation to add it here.',
+  dislike: 'Films you mark "not for me" teach Clinema what to avoid. Undo any of them here.',
+};
 
 export default function LibraryPage() {
   const [params, setParams] = useSearchParams();
@@ -27,7 +33,7 @@ export default function LibraryPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-extrabold sm:text-4xl">My library</h1>
 
-      <div role="tablist" aria-label="Library" className="mt-6 inline-flex rounded-xl bg-white/5 p-1">
+      <div role="tablist" aria-label="Library" className="mt-6 inline-flex max-w-full overflow-x-auto rounded-xl bg-white/5 p-1">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const selected = tab.id === active.id;
@@ -38,7 +44,7 @@ export default function LibraryPage() {
               type="button"
               aria-selected={selected}
               onClick={() => setParams({ tab: tab.id }, { replace: true })}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-primary text-white' : 'text-white/70 hover:text-white'}`}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-primary text-white' : 'text-white/70 hover:text-white'}`}
             >
               <Icon aria-hidden="true" /> {tab.label}
               {library.status === 'ready' && (
@@ -69,7 +75,7 @@ export default function LibraryPage() {
                 </Link>
               }
             >
-              Tap the {active.flag === 'like' ? 'heart' : 'bookmark'} on any recommendation to add it here.
+              {HINT[active.flag]}
             </EmptyState>
           ))}
       </div>
