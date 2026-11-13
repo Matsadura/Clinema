@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Holds class User_Movie (a user's like/save flags for a movie)."""
+"""Holds class User_Movie (a user's like/save/dislike flags for a movie)."""
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
@@ -16,4 +16,5 @@ class User_Movie(BaseModel, Base):
     movie_id = Column(Integer, nullable=False)
     save = Column(Boolean, nullable=True, default=False)
     like = Column(Boolean, nullable=True, default=False)
+    dislike = Column(Boolean, nullable=True, default=False)
     user = relationship("User", back_populates="user_movies")
