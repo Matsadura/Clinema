@@ -82,24 +82,38 @@ def lookup_many(items, api_key):
     return movies
 
 
+def _discover_page(genres, joiner, api_key):
+    params = {"api_key": api_key,
+              "with_genres": joiner.join(map(str, genres)),
+              "sort_by": "popularity.desc", "vote_count.gte": 500,
+              "vote_average.gte": 6.5, "include_adult": "false",
+              "page": 1}
+    status, body = get_json(f"{API}/discover/movie", params)
+    if status != 200 or not body:
+        return []
+    return [normalize(r) for r in body.get("results", [])
+            if r.get("poster_path")]
+
+
 @TTLMemo(maxsize=256, ttl=3600)
 def discover(genre_ids, api_key):
-    """Popular, well-rated movies for a tuple of genre ids (fallback)."""
-    if not api_key:
+    """Well-rated, popular movies for a tuple of genre ids (fallback).
+
+    Prefers films matching the two strongest genres together, widening to
+    any of the genres when that is too restrictive.
+    """
+    if not api_key or not genre_ids:
         return None
-    params = {"api_key": api_key,
-              "with_genres": "|".join(map(str, genre_ids)),
-              "sort_by": "popularity.desc", "vote_count.gte": 300,
-              "include_adult": "false", "page": 1}
     try:
-        status, body = get_json(f"{API}/discover/movie", params)
+        results = _discover_page(genre_ids[:2], ",", api_key)
+        if len(results) < 8:
+            seen = {m["tmdb_id"] for m in results}
+            results += [m for m in _discover_page(genre_ids, "|", api_key)
+                        if m["tmdb_id"] not in seen]
     except requests.RequestException as exc:
         log.warning("TMDB discover failed: %s", exc)
         return None
-    if status != 200 or not body:
-        return None
-    return [normalize(r) for r in body.get("results", [])
-            if r.get("poster_path")]
+    return results or None
 
 
 @TTLMemo(maxsize=2048, ttl=24 * 3600)

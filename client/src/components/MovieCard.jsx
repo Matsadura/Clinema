@@ -1,155 +1,102 @@
-import { TiHeartFullOutline, TiBookmark, TiStarFullOutline } from "react-icons/ti";
-import { MdDateRange, MdLanguage, MdPeopleAlt } from "react-icons/md";
-import { useState } from 'react';
-import axios from 'axios';
+import { memo, useState } from 'react';
+import { TiStarFullOutline } from 'react-icons/ti';
+import { FiBookmark, FiHeart } from 'react-icons/fi';
+import { MdMovie } from 'react-icons/md';
+import { Skeleton } from './ui.jsx';
 
-export default function MovieCard({ userId, movie_id, title, poster, year, rate, popularity, language, description }) {
-    const [liked, setLiked] = useState(false);
-    const [save, setSave] = useState(false);
+export function PosterFallback({ title }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary-light to-secondary p-4 text-center text-white/60">
+      <MdMovie className="text-4xl" aria-hidden="true" />
+      <span className="line-clamp-3 text-sm font-semibold">{title}</span>
+    </div>
+  );
+}
 
-    const toggleLike = async (movie_id, liked) => {
-        try {
-            const apiUrl = process.env.REACT_APP_API_URL;
-            const token = localStorage.getItem('_token');
-            const userId = localStorage.getItem('_user_id');
+export function ActionButton({ active, onClick, label, activeClass, children }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      className={`grid h-9 w-9 place-items-center rounded-full backdrop-blur transition hover:scale-110
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${active ? activeClass : 'bg-black/55 text-white hover:bg-black/75'}`}
+    >
+      {children}
+    </button>
+  );
+}
 
-            // Check if user already liked this movie
-            const userLikedResponse = await axios.get(`${apiUrl}/${userId}/user_movies`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+function MovieCard({ movie, liked = false, saved = false, onToggle, onOpen }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const { title, poster, year, rating } = movie;
 
-            const likedMovie = userLikedResponse.data.find(movie => movie && movie.movie_id === movie_id);
-
-            if (likedMovie) {
-                // Update like
-                const dataToSend = { user_id: userId, movie_id: movie_id, like: !liked };
-                const updateResponse = await axios.put(`${apiUrl}/${userId}/liked/${likedMovie.id}`, dataToSend, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (updateResponse.status === 200) {
-                    setLiked(!liked);
-                }
-            } else {
-                // Add new like
-                const dataToSend = { user_id: userId, movie_id: movie_id, like: true };
-                const response = await axios.post(`${apiUrl}/${userId}/liked`, dataToSend, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                setLiked(true);
-            }
-        } catch (error) {
-            console.error("Error toggling like:", error.response?.data || error.message);
-        }
-    };
-
-    const toggleSave = async (movie_id, save) => {
-        try {
-            const apiUrl = process.env.REACT_APP_API_URL;
-            const token = localStorage.getItem('_token');
-            const userId = localStorage.getItem('_user_id');
-
-            // Check if user already saved this movie
-            const userSavedResponse = await axios.get(`${apiUrl}/${userId}/user_movies`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            const savedMovie = userSavedResponse.data.find(movie => movie && movie.movie_id === movie_id);
-
-            if (savedMovie) {
-                // Update save
-                const dataToSend = { user_id: userId, movie_id: movie_id, save: !save };
-                const updateResponse = await axios.put(`${apiUrl}/${userId}/save/${savedMovie.id}`, dataToSend, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (updateResponse.status === 200) {
-                    setSave(!save);
-                }
-            } else {
-                // Add new save
-                const dataToSend = { user_id: userId, movie_id: movie_id, save: true };
-                const response = await axios.post(`${apiUrl}/${userId}/save`, dataToSend, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                setSave(true);
-            }
-        } catch (error) {
-            console.error("Error toggling save:", error.response?.data || error.message);
-        }
-    };
-
-    return (
-        <div className='flex justify-start ml-5 mt-5 md:flex-row flex-col md:h-96 h-fit'>
-            <div className='text-white gap-3 bg-secondary-light rounded-3xl flex flex-col-reverse md:flex-row md:rounded-br-none pr-5'>
-                <div className='flex-shrink-0 p-5 md:w-60 justify-center w-[1000pw] aspect-[1.5] md:relative top-[1rem] md:scale-110 scale-1 bg-secondary-light rounded-3xl flex'>
-                    {poster ? (
-                        <img className="object-cover rounded-2xl" src={poster} alt="Poster" />
-                    ) : (
-                        <div className='bg-primary border-2 w-full rounded-2xl flex items-center justify-center font-bold'>Poster Not Found</div>
-                    )}
-                </div>
-
-                <div className='md:p-10 w-[600px] p-4 flex flex-col justify-between'>
-                    <h3 className='font-bold text-3xl pt-5 md:mb-0 mb-8 md:text-start text-center'>{title || 'No Title :('}</h3>
-                    <div className='ml-4 flex items-center md:border-0 md:py-0 border-b-2 border-t-2 py-4 md:justify-start justify-center md:mt-0 mt-5 gap-2'>
-                        <div className='text-4xl text-yellow-400'>
-                            <TiStarFullOutline />
-                        </div>
-                        <span className='text-2xl font-bold relative top-[4px]'>{rate || 0.0}</span>
-                    </div>
-
-                    <div className='mt-5'>
-                        <h4 className='font-bold text-lg mb-2'>Description</h4>
-                        <p className='text-sm md:text-md text-gray-300'>{description || 'No description available.'}</p>
-                    </div>
-
-                    <div className='flex flex-row justify-around gap-2 md:mt-5 mt-10 md:flex-nowrap flex-wrap'>
-                        <div className='flex md:flex-row flex-col gap-3 items-center px-5 md:border-r'>
-                            <div className='text-4xl'>
-                                <MdPeopleAlt />
-                            </div>
-                            <div className='md:text-start text-center'>
-                                <p className='md:mb-0 mb-1'>Popularity</p>
-                                <p className='md:text-lg md:text-md font-bold'>{popularity || '0%'}</p>
-                            </div>
-                        </div>
-                        <div className='flex md:flex-row flex-col gap-2 items-center px-5 md:border-r'>
-                            <div className='text-4xl'>
-                                <MdDateRange />
-                            </div>
-                            <div className='md:text-start text-center'>
-                                <p className='md:mb-0 mb-1'>Year</p>
-                                <p className='md:text-lg md:text-md font-bold'>{year || 1912}</p>
-                            </div>
-                        </div>
-                        <div className='flex md:flex-row flex-col gap-2 items-center px-5 md:border-r'>
-                            <div className='text-4xl'>
-                                <MdLanguage />
-                            </div>
-                            <div className='md:text-start text-center'>
-                                <p className='md:mb-0 mb-1'>Language</p>
-                                <p className='md:text-lg md:text-md font-bold'>{language || 'Nolang'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className='bg-secondary rounded-3xl flex flex-col md:h-96 text-white'>
-                <div className='p-4 flex justify-center gap-4 rounded-3xl bg-secondary'>
-                    <button
-                        onClick={() => toggleLike(movie_id, liked)}
-                        className={`rounded-2xl ${liked ? 'text-red-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
-                        <TiHeartFullOutline />
-                    </button>
-                    <button
-                        onClick={() => toggleSave(movie_id, save)}
-                        className={`rounded-2xl ${save ? 'text-yellow-400' : ''} text-4xl bg-secondary-light p-4 hover:bg-primary hover:shadow-sm hover:shadow-secondary-lighter`}>
-                        <TiBookmark />
-                    </button>
-                </div>
-            </div>
+  return (
+    <article className="group relative animate-fade-in">
+      <button
+        type="button"
+        onClick={() => onOpen?.(movie)}
+        className="block w-full overflow-hidden rounded-2xl bg-secondary-light text-left shadow-lg ring-1 ring-white/5 transition
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light group-hover:-translate-y-1 group-hover:shadow-2xl"
+        aria-label={`${title}${year ? ` (${year})` : ''} — view details`}
+      >
+        <div className="aspect-[2/3] w-full overflow-hidden">
+          {poster && !imageFailed ? (
+            <img
+              src={poster}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              width="500"
+              height="750"
+              onError={() => setImageFailed(true)}
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <PosterFallback title={title} />
+          )}
         </div>
-    );
+        <div className="p-3">
+          <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">{title}</h3>
+          <div className="mt-1 flex items-center gap-3 text-xs text-white/60">
+            {year && <span>{year}</span>}
+            {rating > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <TiStarFullOutline className="text-amber-400" aria-hidden="true" />
+                {rating.toFixed(1)}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+
+      {onToggle && (
+        <div className="absolute right-2 top-2 flex flex-col gap-2 opacity-100 transition sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+          <ActionButton active={liked} onClick={() => onToggle(movie, 'like')} label={liked ? `Unlike ${title}` : `Like ${title}`} activeClass="bg-rose-500 text-white">
+            <FiHeart className={liked ? 'fill-current' : ''} aria-hidden="true" />
+          </ActionButton>
+          <ActionButton active={saved} onClick={() => onToggle(movie, 'save')} label={saved ? `Remove ${title} from watchlist` : `Save ${title} to watchlist`} activeClass="bg-amber-400 text-secondary-dark">
+            <FiBookmark className={saved ? 'fill-current' : ''} aria-hidden="true" />
+          </ActionButton>
+        </div>
+      )}
+    </article>
+  );
+}
+
+export default memo(MovieCard);
+
+export function MovieCardSkeleton() {
+  return (
+    <div>
+      <Skeleton className="aspect-[2/3] w-full rounded-2xl" />
+      <Skeleton className="mt-3 h-4 w-3/4" />
+      <Skeleton className="mt-2 h-3 w-1/3" />
+    </div>
+  );
 }

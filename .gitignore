@@ -26,3 +26,6 @@
 **/.vscode/
 .idea/
 .DS_Store
+
+# Local tooling output
+.playwright-mcp/

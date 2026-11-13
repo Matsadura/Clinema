@@ -12,11 +12,12 @@ Routes:
     - PUT    /<user_id>/liked/<id> | save/<id>   Update entry (legacy)
     - DELETE /<user_id>/liked/<id> | save/<id>   Delete entry
 """
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 
+from api.services import tmdb
 from api.views import app_views
 from api.views.helpers import (error, json_body, movies_by_tmdb_id,
-                               owner_required)
+                               owner_required, upsert_movies)
 from models import storage
 from models.user_movie import User_Movie
 
@@ -24,8 +25,19 @@ FLAGS = ('like', 'save')
 
 
 def _with_movies(entries):
-    """Serialise entries, embedding cached movie details (one query)."""
+    """Serialise entries, embedding cached movie details (one query).
+
+    Movies missing from the local cache (e.g. rows created by the original
+    prototype) are fetched from TMDB once and stored.
+    """
     movies = movies_by_tmdb_id({e.movie_id for e in entries})
+    missing = [e.movie_id for e in entries if e.movie_id not in movies]
+    if missing:
+        key = current_app.config.get("TMDB_API_KEY")
+        fetched = [m for m in (tmdb.details(i, key) for i in missing[:20])
+                   if m]
+        upsert_movies(fetched)
+        movies.update({m["tmdb_id"]: m for m in fetched})
     result = []
     for entry in entries:
         data = entry.to_dict()
