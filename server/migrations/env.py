@@ -5,7 +5,8 @@ from sqlalchemy import create_engine
 
 from models.base_model import Base
 from models.engine.db_storage import database_url_from_env
-import models.interaction  # noqa: F401  (register tables on metadata)
+import models.api_key  # noqa: F401  (register tables on metadata)
+import models.interaction  # noqa: F401
 import models.movie  # noqa: F401
 import models.user  # noqa: F401
 import models.user_movie  # noqa: F401

@@ -128,4 +128,16 @@ export const api = {
       auth: true,
     }),
   taste: (userId, opts) => request(`/${encodeURIComponent(userId)}/taste`, { auth: true, ...opts }),
+
+  // Bring-your-own API keys (stored encrypted; only the last 4 chars come back)
+  apiKeys: (userId, opts) => request(`/${encodeURIComponent(userId)}/api-keys`, { auth: true, ...opts }),
+  saveApiKey: (userId, provider, key) =>
+    request(`/${encodeURIComponent(userId)}/api-keys/${provider}`, {
+      method: 'PUT',
+      body: { key },
+      auth: true,
+      timeout: 20_000,
+    }),
+  deleteApiKey: (userId, provider) =>
+    request(`/${encodeURIComponent(userId)}/api-keys/${provider}`, { method: 'DELETE', auth: true }),
 };

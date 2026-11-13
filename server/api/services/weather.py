@@ -4,6 +4,8 @@ import logging
 import requests
 
 from api.services import ServiceError
+from api.services.credentials import (KeyRejected, as_list, redact,
+                                      report_rejected)
 from api.services.http import TTLMemo, get_json
 
 log = logging.getLogger(__name__)
@@ -47,8 +49,10 @@ def _fetch(lat, lon, api_key):
                                            "appid": api_key,
                                            "units": "metric"})
     except requests.RequestException as exc:
-        log.warning("OpenWeather request failed: %s", exc)
+        log.warning("OpenWeather request failed: %s", redact(exc))
         return None
+    if status in (401, 403):
+        raise KeyRejected("openweather", api_key)
     if status != 200 or not isinstance(body, dict):
         log.warning("OpenWeather returned HTTP %s", status)
         return None
@@ -58,16 +62,25 @@ def _fetch(lat, lon, api_key):
 def get_weather(lat, lon, api_key):
     """Return normalised weather for coordinates (cached ~10 min per ~1 km).
 
-    Raises ValueError for bad coordinates and ServiceError when the
-    upstream API is unavailable or not configured.
+    ``api_key`` is a key or an ordered list of candidate keys (user key
+    first, then the server's); rejected or failing keys fall through to the
+    next one. Raises ValueError for bad coordinates and ServiceError when
+    the upstream API is unavailable or not configured.
     """
     lat, lon = parse_coords(lat, lon)
-    if not api_key:
+    keys = as_list(api_key)
+    if not keys:
         raise ServiceError("Weather service is not configured")
-    weather = _fetch(round(lat, 2), round(lon, 2), api_key)
-    if weather is None:
-        raise ServiceError("Weather service is temporarily unavailable")
-    return weather
+    for key in keys:
+        try:
+            weather = _fetch(round(lat, 2), round(lon, 2), key)
+        except KeyRejected as exc:
+            log.warning("OpenWeather rejected a key; trying the next one")
+            report_rejected(exc.provider, exc.key)
+            continue
+        if weather is not None:
+            return weather
+    raise ServiceError("Weather service is temporarily unavailable")
 
 
 def describe(weather):

@@ -31,6 +31,12 @@ class User(BaseModel, Base):
     user_movies = relationship("User_Movie",
                                back_populates="user",
                                cascade="all, delete-orphan")
+    # Deleting an account removes everything tied to it, even on databases
+    # that don't enforce ON DELETE CASCADE (e.g. SQLite)
+    api_keys = relationship("UserApiKey", cascade="all, delete-orphan")
+    interactions = relationship("Interaction", cascade="all, delete-orphan")
+    taste_profile = relationship("TasteProfile", uselist=False,
+                                 cascade="all, delete-orphan")
 
     def __init__(self, *args, **kwargs):
         """Initialise a user, hashing the plain-text password."""

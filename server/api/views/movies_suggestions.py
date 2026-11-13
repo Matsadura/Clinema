@@ -6,29 +6,20 @@
 """
 import logging
 
-from flask import current_app, jsonify
-from flask_jwt_extended import get_current_user, verify_jwt_in_request
+from flask import current_app, g, jsonify
 
 from api.extensions import limiter
 from api.services import ServiceError, taste
 from api.services.recommender import parse_moods, recommend
 from api.services.weather import get_weather
 from api.views import app_views
-from api.views.helpers import error, json_body, upsert_movies
+from api.views.helpers import (error, json_body, optional_user,
+                               request_keys, upsert_movies)
 from models import storage
 
 SUGGESTION_LIMIT = "20 per minute; 200 per day"
 MAX_SEEN_IDS = 300
 log = logging.getLogger(__name__)
-
-
-def _optional_user():
-    """The signed-in user if a valid token was sent, else None."""
-    try:
-        verify_jwt_in_request(optional=True)
-        return get_current_user()
-    except Exception:  # noqa: BLE001 - bad/expired token -> anonymous
-        return None
 
 
 def _parse_seen_ids(value):
@@ -66,10 +57,12 @@ def _run(data, need_mood=False, need_location=False):
         return error("Provide a mood, a location, or both")
 
     config = current_app.config
+    user = optional_user()
+    keys = request_keys(user)
     weather, weather_error = None, None
     if has_location:
         try:
-            weather = get_weather(lat, lon, config["OPENWEATHER_API_KEY"])
+            weather = get_weather(lat, lon, keys["openweather"])
         except ValueError as exc:
             return error(str(exc))
         except ServiceError as exc:
@@ -77,10 +70,9 @@ def _run(data, need_mood=False, need_location=False):
                 raise
             weather_error = exc.message  # degrade to mood-only
 
-    user = _optional_user()
     user_id = user.id if user else None
     result = recommend(moods, weather, config, user_id=user_id,
-                       seen_ids=seen_ids)
+                       seen_ids=seen_ids, keys=keys)
     upsert_movies(result["movies"])
     if user_id:
         context = {"moods": moods,
@@ -92,6 +84,7 @@ def _run(data, need_mood=False, need_location=False):
             log.exception("Could not record recommendation history")
     return jsonify({
         "personalized": result["personalized"],
+        "key_sources": g.key_sources,
         "excluded": result["excluded"],
         "movies": result["movies"],
         "suggestions": result["titles"],

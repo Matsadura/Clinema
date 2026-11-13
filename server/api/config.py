@@ -60,11 +60,33 @@ def build_config(overrides=None):
         "LLM_TIMEOUT": _int("LLM_TIMEOUT", 20),
         "TMDB_API_KEY": os.getenv("TMDB_API_KEY", ""),
     }
+    config["KEY_ENCRYPTION_KEY"] = os.getenv("KEY_ENCRYPTION_KEY", "")
     if overrides:
         config.update(overrides)
+    _check_encryption_key(config)
 
     for key in ("OPENWEATHER_API_KEY", "GROQ_API_KEY", "TMDB_API_KEY"):
         if not config[key]:
             log.warning("%s is not set; related features will be disabled",
                         key)
     return config
+
+
+def _check_encryption_key(config):
+    """Validate KEY_ENCRYPTION_KEY (encrypts users' own API keys)."""
+    raw = config.get("KEY_ENCRYPTION_KEY") or ""
+    if not raw.strip():
+        log.warning("KEY_ENCRYPTION_KEY is not set: user API keys are "
+                    "encrypted with a key derived from JWT_SECRET_KEY "
+                    "(rotating the JWT secret will invalidate them)")
+        return
+    from cryptography.fernet import Fernet
+    for key in (k.strip() for k in raw.split(",") if k.strip()):
+        try:
+            Fernet(key.encode())
+        except ValueError:
+            raise RuntimeError(
+                "KEY_ENCRYPTION_KEY must be one or more comma-separated "
+                "Fernet keys. Generate one with: python3 -c \"from "
+                "cryptography.fernet import Fernet; "
+                "print(Fernet.generate_key().decode())\"")

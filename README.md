@@ -46,6 +46,9 @@ stack ships as small, non-root Docker images with health checks.
   every prompt and shown on your profile page.
 - ❤️ **Library:** likes, a watchlist and a "Not for me" list, with optimistic updates.
 - 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
+- 🔑 **Bring your own API keys:** signed-in users can plug in their own Groq, TMDB and OpenWeather keys.
+  Keys are verified with the provider, encrypted at rest and never shown again. Anything a user doesn't
+  provide, or that the provider later rejects, falls back to the server's keys automatically.
 - 📱 **Responsive and accessible:** mobile-first layout, keyboard navigation, focus-managed dialogs,
   reduced-motion support.
 - ⚡ **Fast:** route-level code splitting, server-side TTL caches, parallel TMDB lookups, gzip and immutable
@@ -166,6 +169,7 @@ All configuration lives in a single root `.env` (see [`.env.example`](.env.examp
 | `GROQ_API_KEY` | ✅ | Groq API key (without it, Clinema uses the TMDB genre fallback only) |
 | `TMDB_API_KEY` | ✅ | TMDB v3 API key |
 | `JWT_SECRET_KEY` | ✅ | ≥ 32 random characters. Startup fails in production without it. |
+| `KEY_ENCRYPTION_KEY` | Recommended | Fernet key(s) that encrypt users' own API keys, comma-separated with the newest first for rotation. If unset, a key is derived from `JWT_SECRET_KEY`, so rotating the JWT secret would invalidate saved user keys. |
 | `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | ✅ (Docker) | Database credentials |
 | `MYSQL_DATABASE`, `MYSQL_USER` | | Default to `clinema` |
 | `APP_ENV` | | `production` (default in compose) or `development` |
@@ -212,6 +216,19 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 | `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?, dislike?}` |
 | `POST` | `/api/<user_id>/interactions` | Log a view `{movie_id}` |
 | `GET` | `/api/<user_id>/taste` | Learned taste profile and its prompt summary |
+| `GET` | `/api/<user_id>/api-keys` | Which providers use the user's own key (masked) |
+| `PUT` / `DELETE` | `/api/<user_id>/api-keys/<provider>` | Verify and save, or remove, a user key (`groq`, `tmdb`, `openweather`) |
+
+## Bring-your-own API keys
+
+- **Resolution:** each request builds an ordered list of keys per provider: the signed-in user's key first (if
+  saved and not rejected), then the server's. The weather, TMDB and LLM services try them in order, so a missing,
+  revoked or rate-limited user key falls back without the user noticing.
+- **Rejections:** a key the provider rejects (401/403) is marked `invalid`, stops being tried, and is flagged on the
+  profile page so the user can replace it.
+- **Isolation:** Groq clients, circuit breakers and unavailable-model tracking are kept per key (by a hashed
+  fingerprint), so one user's key is never used for anyone else, and a broken key can't disable AI for others.
+- **Logs:** API keys are redacted from upstream error messages before logging.
 
 ## Deployment notes
 

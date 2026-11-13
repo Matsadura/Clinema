@@ -22,7 +22,7 @@ from flask import current_app, jsonify, request
 from api.services import taste, tmdb
 from api.views import app_views
 from api.views.helpers import (error, json_body, movies_by_tmdb_id,
-                               owner_required, upsert_movies)
+                               owner_required, request_keys, upsert_movies)
 from models import storage
 from models.user_movie import User_Movie
 
@@ -32,7 +32,7 @@ FLAG_EVENTS = {'like': ('like', 'unlike'), 'dislike': ('dislike', 'undislike'),
                'save': ('save', 'unsave')}
 
 
-def _with_movies(entries):
+def _with_movies(entries, user=None):
     """Serialise entries, embedding cached movie details (one query).
 
     Movies missing from the local cache (e.g. rows created by the original
@@ -41,7 +41,7 @@ def _with_movies(entries):
     movies = movies_by_tmdb_id({e.movie_id for e in entries})
     missing = [e.movie_id for e in entries if e.movie_id not in movies]
     if missing:
-        key = current_app.config.get("TMDB_API_KEY")
+        key = request_keys(user)["tmdb"]
         fetched = [m for m in (tmdb.details(i, key) for i in missing[:20])
                    if m]
         upsert_movies(fetched)
@@ -85,14 +85,13 @@ def _owned_entry(user, user_movie_id):
 @owner_required
 def library(user):
     """Every library entry with embedded movie details."""
-    return jsonify(_with_movies(_user_entries(user)))
+    return jsonify(_with_movies(_user_entries(user), user))
 
 
 def _learn(user, tmdb_ids):
     """Enrich the movies' taste features and rebuild the user's profile."""
     try:
-        taste.ensure_features(tmdb_ids,
-                              current_app.config.get("TMDB_API_KEY"))
+        taste.ensure_features(tmdb_ids, request_keys(user)["tmdb"])
         profile = taste.refresh_profile(user.id)
         storage.save()
         return profile
@@ -194,21 +193,21 @@ def user_movies(user):
 @owner_required
 def save_movies(user):
     """Saved movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'save')))
+    return jsonify(_with_movies(_user_entries(user, 'save'), user))
 
 
 @app_views.get('/<user_id>/liked')
 @owner_required
 def liked_movies(user):
     """Liked movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'like')))
+    return jsonify(_with_movies(_user_entries(user, 'like'), user))
 
 
 @app_views.get('/<user_id>/disliked')
 @owner_required
 def disliked_movies(user):
     """Disliked movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'dislike')))
+    return jsonify(_with_movies(_user_entries(user, 'dislike'), user))
 
 
 @app_views.post('/<user_id>/save')

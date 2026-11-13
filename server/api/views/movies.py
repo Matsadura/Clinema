@@ -6,12 +6,12 @@ Routes:
     - POST /movies             Cache a movie (auth required)
     - GET  /movies/<tmdb_id>   Get one movie by TMDB id
 """
-from flask import current_app, jsonify, request
+from flask import jsonify, request
 from flask_jwt_extended import jwt_required
 
 from api.services import tmdb
 from api.views import app_views
-from api.views.helpers import error, json_body, upsert_movies
+from api.views.helpers import error, json_body, request_keys, upsert_movies
 from models import storage
 from models.movie import Movie
 
@@ -60,7 +60,7 @@ def get_movie(tmdb_id):
     movie = storage.get_specific(Movie, 'tmdb_id', tmdb_id)
     if movie:
         return jsonify(movie.to_dict())
-    data = tmdb.details(tmdb_id, current_app.config["TMDB_API_KEY"])
+    data = tmdb.details(tmdb_id, request_keys()["tmdb"])
     if not data:
         return error('Movie not found', 404)
     upsert_movies([data])
