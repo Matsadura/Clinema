@@ -80,11 +80,12 @@ def login():
         return error('Missing email or password')
 
     user = storage.get_specific(User, 'email', data['email'].strip().lower())
+    outdated_hash = user is not None and user.needs_rehash()
     if not user or not user.check_password(data['password']):
         return error('Invalid email or password', 401)
 
-    if user.needs_rehash():
-        # Legacy SHA-256 hashes are upgraded inside check_password()
+    if outdated_hash:
+        # check_password() replaced the legacy SHA-256 hash; persist it
         storage.save()
 
     token = create_access_token(identity=user)
