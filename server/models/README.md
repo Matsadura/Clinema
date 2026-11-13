@@ -1,75 +1,26 @@
-# Data Models
+# Data models
 
-This document provides an overview of the data models used in the application. These models are built using SQLAlchemy and inherit from a common BaseModel.
+SQLAlchemy 2 models, all inheriting `BaseModel` (`id` UUID string primary key, `created_at`, `updated_at`).
+Tables are created automatically on startup by `storage.reload()`.
 
-## Table of Contents
+| Model | Table | Key columns |
+|---|---|---|
+| `User` | `users` | `email` (unique), `password` (salted PBKDF2-SHA256), `first_name`, `last_name`, `avatar` |
+| `Movie` | `movies` | `tmdb_id` (unique), `title`, `description`, `poster`, `year`, `rating`, `popularity`, `language`, `adult` |
+| `User_Movie` | `user_movies` | `user_id` → `users.id` (cascade delete), `movie_id` (TMDB id), `like`, `save` |
 
-1. [BaseModel](#basemodel)
-2. [User](#user)
-3. [Movie](#movie)
-4. [User_Movie](#user_movie)
+Notes:
 
-## BaseModel
+- `to_dict()` never includes `password` or SQLAlchemy internals.
+- `User.check_password()` also accepts the unsalted SHA-256 hashes created by the original prototype and
+  upgrades them to PBKDF2 on the next successful login.
+- `Movie` is a local cache of TMDB metadata, filled automatically when recommendations are served.
 
-The BaseModel serves as the base class for all other models. It provides common attributes and methods that are inherited by other models.
+## Storage engine (`models/engine/db_storage.py`)
 
-### Attributes:
-- `id`: String(60), primary key
-- `created_at`: DateTime, default is current UTC time
-- `updated_at`: DateTime, default is current UTC time
+`models.storage` is a `DBStorage` singleton wrapping a thread-local `scoped_session`:
 
-### Methods:
-- `__init__(*args, **kwargs)`: Initializes the model
-- `__str__()`: Returns a string representation of the model
-- `__repr__()`: Returns a string representation of the model
-- `save()`: Updates the `updated_at` attribute and saves the model
-- `to_dict()`: Returns a dictionary representation of the model
-- `delete()`: Deletes the current instance from storage
-
-## User
-
-The User model represents a user in the system.
-
-### Attributes:
-- Inherits `id`, `created_at`, and `updated_at` from BaseModel
-- `email`: String(128), not nullable
-- `password`: String(128), not nullable (stored as SHA-256 hash)
-- `first_name`: String(128), not nullable
-- `last_name`: String(128), not nullable
-- `avatar`: String(256), nullable
-
-### Relationships:
-- `user_movies`: One-to-Many relationship with User_Movie
-
-### Methods:
-- `verify_password(plain_password, hashed_password)`: Static method to verify a password
-
-## Movie
-
-The Movie model represents a movie in the system.
-
-### Attributes:
-- Inherits `id`, `created_at`, and `updated_at` from BaseModel
-- `tmdb_id`: Integer, not nullable
-- `title`: String(128), not nullable
-- `description`: String(2024), nullable
-- `poster`: String(512), nullable
-- `adult`: Boolean, nullable
-- `popularity`: Float, nullable
-- `year`: Integer, nullable
-- `rating`: Float, nullable
-- `language`: String(128), nullable
-
-## User_Movie
-
-The User_Movie model represents the relationship between users and movies, including save and like information.
-
-### Attributes:
-- Inherits `id`, `created_at`, and `updated_at` from BaseModel
-- `user_id`: String(128), foreign key to User.id, not nullable
-- `movie_id`: Integer, not nullable
-- `save`: Boolean, nullable
-- `like`: Boolean, nullable
-
-### Relationships:
-- `user`: Many-to-One relationship with User
+- `reload(url=None)` creates the engine from `DATABASE_URL` (or from the `MYSQL_*` and `DB_HOST` variables),
+  retrying while the database starts.
+- `new`, `save` (rolls back on error), `delete`, `get(cls, id)`, `get_specific`, `get_specific_double`,
+  `all_list`, `all_list_specific`, `count` and `ping`.

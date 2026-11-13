@@ -1,293 +1,103 @@
-# API Documentation
+# Clinema API reference
 
-This document provides an overview of the API endpoints for Clinema.
+Base URL: `/api` (proxied by Nginx in production, by Vite in development).
 
-## Table of Contents
+All bodies are JSON. Errors always have the shape `{"error": "<human-readable message>"}`.
+Authenticated routes need `Authorization: Bearer <token>` from `/login`. Routes containing `<user_id>` only
+work for the user that owns the token (otherwise `403`).
 
-1. [Authentication](#authentication)
-2. [Users](#users)
-3. [Movies](#movies)
-4. [User Movies](#user-movies)
-5. [Weather](#weather)
-6. [Movie Suggestions](#movie-suggestions)
+## Health
 
-## Authentication
+| Method | Path | Description |
+|---|---|---|
+| GET | `/status` | Liveness: `{"status": "OK"}` |
+| GET | `/health` | Readiness: `200 {"status":"OK","database":"up"}` or `503` |
+| GET | `/stats` | Row counts per table |
 
-### Register a new user
+## Auth
 
-- **URL**: `/register`
-- **Method**: `POST`
-- **Input**:
-  - `email`: String (required)
-  - `password`: String (required)
-  - `first_name`: String (required)
-  - `last_name`: String (required)
-- **Success Response**: 
-  - **Code**: 201
-  - **Content**: `{ user_data }`
-- **Error Response**: 
-  - **Code**: 400
-  - **Content**: `{ "error": "Missing required fields" }`
+### `POST /register` (limit: 10 per hour per IP)
+```json
+{ "email": "ada@example.com", "password": "at-least-8", "first_name": "Ada", "last_name": "Lovelace" }
+```
+Returns `201` with `{id, email, first_name, last_name, avatar}`. Errors: `400` for invalid input, `409` if the
+email is already registered. Extra fields are ignored.
 
-### Login
+### `POST /login` (limit: 10 per minute per IP)
+```json
+{ "email": "ada@example.com", "password": "..." }
+```
+Returns `200 {"token", "user_id", "user"}`, or `401` for bad credentials.
 
-- **URL**: `/login`
-- **Method**: `POST`
-- **Input**:
-  - `email`: String (required)
-  - `password`: String (required)
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ "token": "JWT_TOKEN", "user_id": "USER_ID" }`
-- **Error Response**: 
-  - **Code**: 401
-  - **Content**: `{ "error": "Invalid email or password" }`
-
-### Validate User
-
-- **URL**: `/auth_validate`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ "first_name": "FIRST_NAME", "last_name": "LAST_NAME", "avatar": "AVATAR_URL" }`
-- **Error Response**: 
-  - **Code**: 401
-  - **Content**: `{ "error": "Invalid token" }`
-
-## Users
-
-### Get User Profile
-
-- **URL**: `/users/profile`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ user_profile_data }`
-- **Error Response**: 
-  - **Code**: 404
-  - **Content**: `{ "error": "User not found" }`
-
-### Update User Profile
-
-- **URL**: `/users/<user_id>/profile`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Input**:
-  - `first_name`: String (optional)
-  - `last_name`: String (optional)
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ updated_user_profile_data }`
-- **Error Response**: 
-  - **Code**: 403
-  - **Content**: `{ "error": "Cannot update another user" }`
-
-### Delete User Profile
-
-- **URL**: `/users/<user_id>/profile`
-- **Method**: `DELETE`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{}`
-- **Error Response**: 
-  - **Code**: 403
-  - **Content**: `{ "error": "Cannot delete another user" }`
-
-## Movies
-
-### Get All Movies
-
-- **URL**: `/movies`
-- **Method**: `GET`
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `[{ movie_data }, ...]`
-
-### Create a New Movie
-
-- **URL**: `/movies`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Input**:
-  - `title`: String (required)
-  - `tmdb_id`: Integer (required)
-  - `description`: String (optional)
-  - `poster`: String (optional)
-  - `adult`: Boolean (optional)
-  - `popularity`: Float (optional)
-  - `year`: Integer (optional)
-  - `rating`: Float (optional)
-  - `language`: String (optional)
-- **Success Response**: 
-  - **Code**: 201
-  - **Content**: `{ created_movie_data }`
-- **Error Response**: 
-  - **Code**: 409
-  - **Content**: `{ "error": "Movie name already exists" }`
-
-### Get Specific Movie
-
-- **URL**: `/movies/<movie_id>`
-- **Method**: `GET`
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ movie_data }`
-- **Error Response**: 
-  - **Code**: 404
-  - **Content**: `{ "error": "Movie not found" }`
-
-## User Movies
-
-### Get All User Movies
-
-- **URL**: `/<user_id>/user_movies`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `[{ user_movie_data }, ...]`
-- **Error Response**: 
-  - **Code**: 403
-  - **Content**: `{ "error": "Unauthorized to access this data" }`
-
-### Get Saved Movies
-
-- **URL**: `/<user_id>/save`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `[{ saved_movie_data }, ...]`
-- **Error Response**: 
-  - **Code**: 403
-  - **Content**: `{ "error": "Unauthorized to access this data" }`
-
-### Get Liked Movies
-
-- **URL**: `/<user_id>/liked`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `[{ liked_movie_data }, ...]`
-- **Error Response**: 
-  - **Code**: 403
-  - **Content**: `{ "error": "Unauthorized to access this data" }`
-
-### Save or Like a Movie
-
-- **URL**: `/<user_id>/save` or `/<user_id>/liked`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Input**:
-  - `movie_id`: Integer (required)
-  - `user_id`: String (required)
-  - `save`: Boolean (required for save)
-  - `like`: Boolean (required for like)
-- **Success Response**: 
-  - **Code**: 201
-  - **Content**: `{ user_movie_relation_data }`
-- **Error Response**: 
-  - **Code**: 409
-  - **Content**: `{ "error": "User Movie relation already exists" }`
-
-### Delete User-Movie Relation
-
-- **URL**: `/<user_id>/liked/<user_movie_id>` or `/<user_id>/save/<user_movie_id>`
-- **Method**: `DELETE`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{}`
-- **Error Response**: 
-  - **Code**: 404
-  - **Content**: `{ "error": "User_movie is not found" }`
-
-### Update User-Movie Relation
-
-- **URL**: `/<user_id>/liked/<user_movie_id>` or `/<user_id>/save/<user_movie_id>`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization`: Bearer Token
-- **Input**:
-  - `save`: Boolean (optional)
-  - `like`: Boolean (optional)
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ updated_user_movie_relation_data }`
-- **Error Response**: 
-  - **Code**: 404
-  - **Content**: `{ "error": "User_movie not found" }`
+### `GET /auth_validate` 🔒
+Returns the current user.
 
 ## Weather
 
-### Get Weather
+### `GET /weather?lat=<float>&lon=<float>` (limit: 60 per minute)
+Returns normalised conditions (cached for 10 minutes):
+```json
+{ "city": "Paris", "country": "FR", "temp": 9, "feels_like": 7, "humidity": 75, "wind_speed": 5.1,
+  "condition": "Clear", "description": "clear sky", "icon": "01n", "is_day": false }
+```
+Errors: `400` for missing or invalid coordinates, `503` if the upstream service is unavailable or not configured.
 
-- **URL**: `/weather`
-- **Method**: `GET`
-- **Query Parameters**:
-  - `lat`: Float (required)
-  - `lon`: Float (required)
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ weather_data }`
-- **Error Response**: 
-  - **Code**: 400
-  - **Content**: `{ "error": "Missing latitude or longitude" }`
+## Recommendations
 
-## Movie Suggestions
+### `POST /suggestions` (limit: 20 per minute and 200 per day)
+```json
+{ "moods": ["Calm", "Curious"], "latitude": 48.85, "longitude": 2.35 }
+```
+At least one of `moods` or the coordinates is required. Moods are 1–32 letters (spaces, `-` and `'` allowed),
+with at most 6 of them.
 
-### Get Movie Suggestions by Mood and Weather
+```json
+{
+  "movies": [{ "tmdb_id": 157336, "title": "Interstellar", "year": 2014, "rating": 8.5,
+               "poster": "https://image.tmdb.org/t/p/w500/...", "backdrop": "...",
+               "description": "...", "language": "en", "popularity": 120.3, "adult": false }],
+  "suggestions": ["Interstellar", "..."],
+  "source": "ai",
+  "moods": ["Calm", "Curious"],
+  "weather": { "...": "as /weather, or null" },
+  "warning": null
+}
+```
+- `source` is `"ai"` when the LLM produced the list, or `"fallback"` when TMDB genre discovery was used.
+- `warning` is set when the weather lookup failed but mood-only results could still be produced.
+- `503` means no recommendations could be produced at all.
 
-- **URL**: `/movies_by_mood_and_weather`
-- **Method**: `POST`
-- **Input**:
-  - `mood`: String (required)
-  - `latitude`: Float (required)
-  - `longitude`: Float (required)
-- **Success Response**: 
-  - **Code**: 201
-  - **Content**: `{ "suggestions": [movie_titles] }`
-- **Error Response**: 
-  - **Code**: 400
-  - **Content**: `{ "error": "Mood, latitude, and longitude are required" }`
+Legacy aliases with the same response: `POST /movies_by_mood` (`{mood}`), `POST /movies_by_weather`
+(`{latitude, longitude}`) and `POST /movies_by_mood_and_weather`.
 
-### Get Movie Suggestions by Mood Only
+## Movies (local cache of TMDB metadata)
 
-- **URL**: `/movies_by_mood`
-- **Method**: `POST`
-- **Input**:
-  - `mood`: String (required)
-- **Success Response**: 
-  - **Code**: 201
-  - **Content**: `{ "suggestions": [movie_titles] }`
-- **Error Response**: 
-  - **Code**: 400
-  - **Content**: `{ "error": "Mood is required" }`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/movies?limit=50&offset=0` | Paginated list (`limit` ≤ 200) |
+| GET | `/movies/<tmdb_id>` | One movie. Fetched from TMDB and cached if unknown. |
+| POST 🔒 | `/movies` | Cache a movie (`title` and `tmdb_id` required). `409` if it already exists. |
 
-### Get Movie Suggestions by Weather Only
+## Library 🔒
 
-- **URL**: `/movies_by_weather`
-- **Method**: `POST`
-- **Input**:
-  - `latitude`: Float (required)
-  - `longitude`: Float (required)
-- **Success Response**: 
-  - **Code**: 200
-  - **Content**: `{ "suggestions": [movie_titles] }`
-- **Error Response**: 
-  - **Code**: 400
-  - **Content**: `{ "error": "Latitude and longitude are required" }`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/<user_id>/library` | All entries: `[{movie_id, like, save, movie: {...}}]` |
+| PUT | `/<user_id>/library/<tmdb_id>` | Upsert `{"like": bool?, "save": bool?}`. The entry is removed when both are false. |
+| GET | `/<user_id>/liked`, `/<user_id>/save` | Filtered entries, with `movie` details |
+| GET | `/<user_id>/user_movies` | Raw entries |
+| POST | `/<user_id>/liked`, `/<user_id>/save` | Legacy create: `{movie_id, like?, save?}`. `409` if the entry exists. |
+| PUT / DELETE | `/<user_id>/liked/<entry_id>`, `/<user_id>/save/<entry_id>` | Update or delete one of your own entries |
+
+## Users 🔒
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/users/profile` | Current user |
+| PUT | `/users/<user_id>/profile` | `{first_name?, last_name?}` (1–128 characters each) |
+| DELETE | `/users/<user_id>/profile` | Delete the account and its library |
+
+## Status codes
+
+`400` invalid input · `401` missing, invalid or expired token · `403` not your resource · `404` not found ·
+`409` conflict · `429` rate limited · `503` upstream service unavailable · `500` unexpected error (logged)
