@@ -32,27 +32,16 @@ Returns `200 {"token", "user_id", "user"}`, or `401` for bad credentials.
 ### `GET /auth_validate` 🔒
 Returns the current user.
 
-## Weather
-
-### `GET /weather?lat=<float>&lon=<float>` (limit: 60 per minute)
-Returns normalised conditions (cached for 10 minutes):
-```json
-{ "city": "Paris", "country": "FR", "temp": 9, "feels_like": 7, "humidity": 75, "wind_speed": 5.1,
-  "condition": "Clear", "description": "clear sky", "icon": "01n", "is_day": false }
-```
-Errors: `400` for missing or invalid coordinates, `503` if the upstream service is unavailable or not configured.
-
 ## Recommendations
 
 ### `POST /suggestions` (limit: 20 per minute and 200 per day)
 ```json
-{ "moods": ["Calm", "Curious"], "latitude": 48.85, "longitude": 2.35, "seen_ids": [550, 13] }
+{ "moods": ["Calm", "Curious"], "seen_ids": [550, 13] }
 ```
 Optionally authenticated. With a token, results are personalised from the user's taste profile, everything
 the user has been shown, viewed, liked, disliked or saved is excluded, and the returned films are recorded
 so they won't be repeated. `seen_ids` (up to 300 TMDB ids) lets anonymous clients avoid repeats too.
-At least one of `moods` or the coordinates is required. Moods are 1–32 letters (spaces, `-` and `'` allowed),
-with at most 6 of them.
+At least one mood is required. Moods are 1–32 letters (spaces, `-` and `'` allowed), with at most 6 of them.
 
 ```json
 {
@@ -60,23 +49,20 @@ with at most 6 of them.
                "poster": "https://image.tmdb.org/t/p/w500/...", "backdrop": "...",
                "description": "...", "language": "en", "popularity": 120.3, "adult": false,
                "genres": ["Science Fiction", "Drama"], "director": "Christopher Nolan",
-               "why": "personalised reason", "fit": "why it suits the mood and weather",
+               "why": "personalised reason", "fit": "why it suits the mood",
                "tone": "awe-struck, melancholic", "source": "ai" }],
   "suggestions": ["Interstellar", "..."],
   "source": "ai",
   "personalized": true,
   "excluded": 24,
   "moods": ["Calm", "Curious"],
-  "weather": { "...": "as /weather, or null" },
-  "warning": null
+  "key_sources": { "groq": "server", "tmdb": "server" }
 }
 ```
 - `source` is `"ai"` when the LLM produced the list, or `"fallback"` when TMDB genre discovery was used.
-- `warning` is set when the weather lookup failed but mood-only results could still be produced.
 - `503` means no recommendations could be produced at all.
 
-Legacy aliases with the same response: `POST /movies_by_mood` (`{mood}`), `POST /movies_by_weather`
-(`{latitude, longitude}`) and `POST /movies_by_mood_and_weather`.
+Legacy alias with the same response: `POST /movies_by_mood` (`{"mood": [...]}`).
 
 ## Movies (local cache of TMDB metadata)
 
@@ -102,7 +88,7 @@ Legacy aliases with the same response: `POST /movies_by_mood` (`{mood}`), `POST 
 
 ## Bring-your-own API keys 🔒
 
-Providers: `groq`, `tmdb`, `openweather`. A user's own key is tried first for that user's requests; if it's
+Providers: `groq`, `tmdb`. A user's own key is tried first for that user's requests; if it's
 missing or rejected, the server's key is used. Rejected keys are marked `invalid`.
 
 | Method | Path | Description |
@@ -111,7 +97,7 @@ missing or rejected, the server's key is used. Rejected keys are marked `invalid
 | PUT | `/<user_id>/api-keys/<provider>` | `{"key": "..."}` is verified with the provider, then stored encrypted. `200` returns the masked entry. `400` means invalid or rejected, `502` means the provider couldn't verify it, and `404` means an unknown provider. Limited to 10 per hour. |
 | DELETE | `/<user_id>/api-keys/<provider>` | Remove the key and fall back to the server's. `404` if none was saved. |
 
-`POST /suggestions` responses include `key_sources`, e.g. `{"groq": "user", "tmdb": "server", "openweather": "server"}`.
+`POST /suggestions` responses include `key_sources`, e.g. `{"groq": "user", "tmdb": "server"}`.
 
 ## Users 🔒
 

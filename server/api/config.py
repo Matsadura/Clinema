@@ -54,7 +54,6 @@ def build_config(overrides=None):
         "RATELIMIT_HEADERS_ENABLED": True,
         "TRUSTED_PROXIES": _int("TRUSTED_PROXIES", 0),
         "DATABASE_URL": None,  # None -> derived from env by DBStorage
-        "OPENWEATHER_API_KEY": os.getenv("OPENWEATHER_API_KEY", ""),
         "GROQ_API_KEY": os.getenv("GROQ_API_KEY", ""),
         "GROQ_MODEL": os.getenv("GROQ_MODEL", ""),  # "" -> llm.DEFAULT_MODELS
         "LLM_TIMEOUT": _int("LLM_TIMEOUT", 20),
@@ -65,7 +64,7 @@ def build_config(overrides=None):
         config.update(overrides)
     _check_encryption_key(config)
 
-    for key in ("OPENWEATHER_API_KEY", "GROQ_API_KEY", "TMDB_API_KEY"):
+    for key in ("GROQ_API_KEY", "TMDB_API_KEY"):
         if not config[key]:
             log.warning("%s is not set; related features will be disabled",
                         key)

@@ -37,7 +37,7 @@ export function setUnauthorizedHandler(fn) {
 
 /**
  * Perform a JSON request against the API.
- * @param {string} path  Path relative to API_BASE, e.g. "/weather".
+ * @param {string} path  Path relative to API_BASE, e.g. "/suggestions".
  * @param {object} opts  { method, body, auth, timeout, signal }
  * @returns {Promise<any>} Parsed JSON body.
  * @throws {ApiError}
@@ -100,17 +100,13 @@ export const api = {
   deleteAccount: (userId) =>
     request(`/users/${encodeURIComponent(userId)}/profile`, { method: 'DELETE', auth: true }),
 
-  weather: (lat, lon, opts) =>
-    request(`/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, opts),
-
   // Sends the token when signed in so results are personalised; seenIds
   // lets the server avoid repeating films this browser already showed.
-  suggestions: ({ moods = [], coords = null, seenIds = [] }, opts = {}) =>
+  suggestions: ({ moods = [], seenIds = [] }, opts = {}) =>
     request('/suggestions', {
       method: 'POST',
       body: {
         moods,
-        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
         ...(seenIds.length ? { seen_ids: seenIds } : {}),
       },
       auth: true,

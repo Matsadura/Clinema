@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>The right movie for how you feel — and what it's like outside.</strong><br />
-  AI-powered film recommendations from your mood, your local weather, or both.
+  AI-powered film recommendations from your mood that learn your taste and never repeat.
 </p>
 
 <p align="center">
@@ -22,10 +22,9 @@
 
 ## Overview
 
-Choosing a film is harder than watching one. **Clinema** asks how you want to feel, optionally looks up the
-weather where you are, and has an LLM curate a list of films that fit the moment. Every suggestion is matched
-against [TMDB](https://www.themoviedb.org/) for posters, ratings and synopses, and signed-in users can like
-films and build a watchlist.
+Choosing a film is harder than watching one. **Clinema** asks how you want to feel and has an LLM curate a list
+of films that fit the moment. Every suggestion is matched against [TMDB](https://www.themoviedb.org/) for posters,
+ratings and synopses. As you like, save and dismiss films, Clinema learns your taste and personalises every list.
 
 Clinema started as a hackathon project and has since been hardened for production: secrets live server-side,
 external APIs have timeouts, caching and fallbacks, the UI handles every loading and failure state, and the whole
@@ -34,8 +33,6 @@ stack ships as small, non-root Docker images with health checks.
 ## Features
 
 - 🎭 **Mood matching:** pick up to six moods, from *Joyful* to *Reflective*.
-- 🌦️ **Weather-aware:** share your location to factor in live OpenWeather conditions. Denied or unavailable
-  location is handled gracefully.
 - 🤖 **AI curation with graceful degradation:** an open-weight model on Groq (GPT-OSS 120B by default) suggests titles. If the model is slow,
   down or misconfigured, Clinema falls back to TMDB genre discovery, so users always get results.
 - 🎬 **Rich details:** posters, ratings, synopses, and a "Why this pick" explanation for every film.
@@ -46,7 +43,7 @@ stack ships as small, non-root Docker images with health checks.
   every prompt and shown on your profile page.
 - ❤️ **Library:** likes, a watchlist and a "Not for me" list, with optimistic updates.
 - 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
-- 🔑 **Bring your own API keys:** signed-in users can plug in their own Groq, TMDB and OpenWeather keys.
+- 🔑 **Bring your own API keys:** signed-in users can plug in their own Groq and TMDB keys.
   Keys are verified with the provider, encrypted at rest and never shown again. Anything a user doesn't
   provide, or that the provider later rejects, falls back to the server's keys automatically.
 - 📱 **Responsive and accessible:** mobile-first layout, keyboard navigation, focus-managed dialogs,
@@ -63,30 +60,29 @@ stack ships as small, non-root Docker images with health checks.
 └───────────────┘      │  /api → reverse proxy   │      │  JWT · rate limiting │
                        └─────────────────────────┘      └──────────┬───────────┘
                                                                    │
-                           ┌──────────────────────┬────────────────┼──────────────┐
-                           ▼                      ▼                ▼              ▼
-                     OpenWeather API         Groq LLM          TMDB API     MySQL 8.4 (db)
-                     (current weather)  (title suggestions) (movie metadata) users · library
+                                      ┌────────────────────┼────────────────────┐
+                                      ▼                    ▼                    ▼
+                                  Groq LLM             TMDB API           MySQL 8.4 (db)
+                            (title suggestions)    (movie metadata)   users · library · taste
 ```
 
 **Recommendation pipeline** (`server/api/services/`):
 
-1. **Validate** the moods against a strict allow-pattern (prompt-injection hardening) and the coordinates.
-2. **Weather:** fetch the current conditions, cached for 10 minutes per ~1 km grid cell.
-3. **Context** (`taste.py`): load the user's persisted taste profile and build a hard exclusion set. The set
+1. **Validate** the moods against a strict allow-pattern (prompt-injection hardening).
+2. **Context** (`taste.py`): load the user's persisted taste profile and build a hard exclusion set. The set
    covers films recommended in the last 30 days plus everything viewed, liked, disliked or saved; guests send
    `seen_ids` from the browser instead.
-4. **LLM** (`llm.py`): one fresh, uncached generation. The prompt carries the vibe, a compact taste summary
+3. **LLM** (`llm.py`): one fresh, uncached generation. The prompt carries the vibe, a compact taste summary
    (or a cold-start note), the exclusion list, anti-blockbuster rules and two randomly chosen diversity
    constraints. Output follows a strict JSON schema (`title, year, genres, director, country, tone,
-   mood_weather_fit, personalized_reason`). Sampling uses temperature 0.85 with frequency and presence
+   mood_fit, personalized_reason`). Sampling uses temperature 0.85 with frequency and presence
    penalties; models that reject a parameter are retried without it. A circuit breaker and a model fallback
    list protect against outages.
-5. **Screen and resolve** (`recommender.py`): drop excluded titles (normalised), repeat directors and all but
+4. **Screen and resolve** (`recommender.py`): drop excluded titles (normalised), repeat directors and all but
    one over-exposed staple. Resolve on TMDB in parallel and drop excluded TMDB ids. If too few remain, retry
    once with the rejected titles excluded, then backfill from TMDB `discover`, preferring genres you like and
    leaving out ones you dislike.
-6. **Learn:** shown films are logged as `recommended`. Likes, dislikes, saves and opened details are logged
+5. **Learn:** shown films are logged as `recommended`. Likes, dislikes, saves and opened details are logged
    with weights, enriched with TMDB director and keywords, and folded into the profile straight away.
 
 | Directory | Contents |
@@ -103,8 +99,8 @@ stack ships as small, non-root Docker images with health checks.
 
 ### Prerequisites
 
-You need free API keys from [OpenWeather](https://home.openweathermap.org/api_keys),
-[Groq](https://console.groq.com/keys) and [TMDB](https://www.themoviedb.org/settings/api).
+You need free API keys from [Groq](https://console.groq.com/keys) and
+[TMDB](https://www.themoviedb.org/settings/api).
 
 ```bash
 git clone https://github.com/Matsadura/Clinema.git
@@ -165,7 +161,6 @@ All configuration lives in a single root `.env` (see [`.env.example`](.env.examp
 
 | Variable | Required | Description |
 |---|---|---|
-| `OPENWEATHER_API_KEY` | ✅ | OpenWeather API key |
 | `GROQ_API_KEY` | ✅ | Groq API key (without it, Clinema uses the TMDB genre fallback only) |
 | `TMDB_API_KEY` | ✅ | TMDB v3 API key |
 | `JWT_SECRET_KEY` | ✅ | ≥ 32 random characters. Startup fails in production without it. |
@@ -209,20 +204,19 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Readiness probe (checks the database) |
-| `GET` | `/api/weather?lat=&lon=` | Normalised current weather |
-| `POST` | `/api/suggestions` | `{moods?, latitude?, longitude?}` → movies |
+| `POST` | `/api/suggestions` | `{moods, seen_ids?}` → movies |
 | `POST` | `/api/register` · `/api/login` | Account creation and JWT login |
 | `GET` | `/api/<user_id>/library` | Liked and saved films, with details |
 | `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?, dislike?}` |
 | `POST` | `/api/<user_id>/interactions` | Log a view `{movie_id}` |
 | `GET` | `/api/<user_id>/taste` | Learned taste profile and its prompt summary |
 | `GET` | `/api/<user_id>/api-keys` | Which providers use the user's own key (masked) |
-| `PUT` / `DELETE` | `/api/<user_id>/api-keys/<provider>` | Verify and save, or remove, a user key (`groq`, `tmdb`, `openweather`) |
+| `PUT` / `DELETE` | `/api/<user_id>/api-keys/<provider>` | Verify and save, or remove, a user key (`groq`, `tmdb`) |
 
 ## Bring-your-own API keys
 
 - **Resolution:** each request builds an ordered list of keys per provider: the signed-in user's key first (if
-  saved and not rejected), then the server's. The weather, TMDB and LLM services try them in order, so a missing,
+  saved and not rejected), then the server's. The TMDB and LLM services try them in order, so a missing,
   revoked or rate-limited user key falls back without the user noticing.
 - **Rejections:** a key the provider rejects (401/403) is marked `invalid`, stops being tried, and is flagged on the
   profile page so the user can replace it.
@@ -254,4 +248,4 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 - [Zidane ZAOUI](https://github.com/matsadura)
 
 Movie data is provided by [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed
-or certified by TMDB. Weather data is from [OpenWeather](https://openweathermap.org/).
+or certified by TMDB.

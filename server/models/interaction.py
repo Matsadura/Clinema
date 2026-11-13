@@ -29,7 +29,7 @@ class Interaction(BaseModel, Base):
     movie_id = Column(Integer, nullable=False)  # TMDB id
     event = Column(String(16), nullable=False)
     weight = Column(Float, nullable=False, default=0.0)
-    # Optional JSON context, e.g. {"moods": [...], "weather": "Rain"}
+    # Optional JSON context, e.g. {"moods": ["Calm", "Curious"]}
     context = Column(String(512), nullable=True)
 
     __table_args__ = (

@@ -11,7 +11,7 @@ export default function Footer() {
         <div>
           <img src={logo} alt="Clinema" className="h-8 w-auto" width="120" height="32" loading="lazy" />
           <p className="mt-3 max-w-xs text-sm text-white/50">
-            The right movie for how you feel and what it&apos;s like outside — picked by AI.
+            The right movie for how you feel — picked by AI, tuned to your taste.
           </p>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-2 text-sm">
@@ -28,10 +28,6 @@ export default function Footer() {
             Movie data from{' '}
             <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="underline hover:text-white">
               TMDB
-            </a>
-            . Weather from{' '}
-            <a href="https://openweathermap.org/" target="_blank" rel="noreferrer" className="underline hover:text-white">
-              OpenWeather
             </a>
             .
           </p>

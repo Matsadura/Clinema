@@ -1,6 +1,6 @@
 """Bring-your-own API keys.
 
-Signed-in users may store their own Groq, TMDB and OpenWeather keys. Keys
+Signed-in users may store their own Groq and TMDB keys. Keys
 are validated with the provider before saving, encrypted at rest (Fernet,
 with rotation via MultiFernet) and never returned in full.
 
@@ -39,11 +39,6 @@ PROVIDERS = {
         "label": "TMDB (movie data & posters)",
         "config_key": "TMDB_API_KEY",
         "docs_url": "https://www.themoviedb.org/settings/api",
-    },
-    "openweather": {
-        "label": "OpenWeather (local weather)",
-        "config_key": "OPENWEATHER_API_KEY",
-        "docs_url": "https://home.openweathermap.org/api_keys",
     },
 }
 _KEY_FORMAT = re.compile(r"^[A-Za-z0-9_\-.]{16,200}$")
@@ -122,15 +117,10 @@ def _probe(provider, key):
         response = session.get("https://api.groq.com/openai/v1/models",
                                headers={"Authorization": f"Bearer {key}"},
                                timeout=DEFAULT_TIMEOUT)
-    elif provider == "tmdb":
+    else:
         response = session.get("https://api.themoviedb.org/3/configuration",
                                params={"api_key": key},
                                timeout=DEFAULT_TIMEOUT)
-    else:
-        response = session.get(
-            "https://api.openweathermap.org/data/2.5/weather",
-            params={"lat": 51.5, "lon": 0, "appid": key},
-            timeout=DEFAULT_TIMEOUT)
     return response.status_code
 
 
@@ -148,10 +138,8 @@ def validate(provider, key):
         raise VerificationUnavailable(
             "Couldn't reach the provider to verify the key. Try again.")
     if status in (401, 403):
-        hint = (" New OpenWeather keys can take up to 2 hours to activate."
-                if provider == "openweather" else "")
         raise InvalidKey(f"{PROVIDERS[provider]['label'].split(' (')[0]} "
-                         f"rejected this key.{hint}")
+                         "rejected this key.")
     if status == 429:
         return key  # valid but rate-limited right now
     if status >= 400:
@@ -225,7 +213,8 @@ def resolve(config, user_id=None):
     if not user_id:
         return keys, sources
     rows = storage.session.query(UserApiKey).filter(
-        UserApiKey.user_id == user_id, UserApiKey.status == "valid")
+        UserApiKey.user_id == user_id, UserApiKey.status == "valid",
+        UserApiKey.provider.in_(list(PROVIDERS)))
     for row in rows:
         plain = decrypt(row.secret, config)
         if not plain:

@@ -24,7 +24,6 @@ from models import storage  # noqa: E402
 TEST_CONFIG = {
     "DATABASE_URL": "sqlite://",
     "JWT_SECRET_KEY": "test-secret-key-that-is-long-enough-1234",
-    "OPENWEATHER_API_KEY": "test-weather",
     "GROQ_API_KEY": "test-groq",
     "TMDB_API_KEY": "test-tmdb",
     "GROQ_MODEL": "test-model",
@@ -32,7 +31,6 @@ TEST_CONFIG = {
     "CORS_ORIGINS": [],
 }
 
-WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 TMDB_SEARCH = "https://api.themoviedb.org/3/search/movie"
 TMDB_DISCOVER = "https://api.themoviedb.org/3/discover/movie"
 
@@ -87,19 +85,6 @@ def fake_llm(monkeypatch):
     fake = FakeLLM()
     monkeypatch.setattr(llm, "_get_client", lambda *a, **k: fake)
     return fake
-
-
-def weather_payload(**overrides):
-    payload = {
-        "name": "Paris",
-        "sys": {"country": "FR"},
-        "main": {"temp": 12.4, "feels_like": 10.6, "humidity": 80},
-        "wind": {"speed": 3.0},
-        "weather": [{"main": "Rain", "description": "light rain",
-                     "icon": "10n"}],
-    }
-    payload.update(overrides)
-    return payload
 
 
 def tmdb_movie(id_, title, year=2000, poster="/p.jpg", **extra):

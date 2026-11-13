@@ -10,7 +10,7 @@ describe('MoodPicker', () => {
   it('requires a mood, then submits the selection', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    render(<MoodPicker onSubmit={onSubmit} hasLocation onRequestLocation={vi.fn()} />);
+    render(<MoodPicker onSubmit={onSubmit} />);
 
     const submit = screen.getByRole('button', { name: 'Match my mood' });
     expect(submit).toBeDisabled();
@@ -19,13 +19,13 @@ describe('MoodPicker', () => {
     await user.click(screen.getByRole('button', { name: /Curious/ }));
     expect(screen.getByRole('button', { name: /Calm/ })).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(screen.getByRole('button', { name: 'Mood + weather' }));
-    expect(onSubmit).toHaveBeenCalledWith({ moods: ['Calm', 'Curious'], withWeather: true });
+    await user.click(submit);
+    expect(onSubmit).toHaveBeenCalledWith({ moods: ['Calm', 'Curious'] });
   });
 
   it('filters moods by search and enforces the selection limit', async () => {
     const user = userEvent.setup();
-    render(<MoodPicker onSubmit={vi.fn()} hasLocation={false} onRequestLocation={vi.fn()} />);
+    render(<MoodPicker onSubmit={vi.fn()} />);
 
     for (const mood of MOODS.slice(0, MAX_MOODS)) {
       await user.click(screen.getByRole('button', { name: mood.name }));
@@ -37,12 +37,9 @@ describe('MoodPicker', () => {
     expect(screen.getByText(/No moods match/)).toBeInTheDocument();
   });
 
-  it('offers to add location when it is not available', async () => {
-    const user = userEvent.setup();
-    const onRequestLocation = vi.fn();
-    render(<MoodPicker onSubmit={vi.fn()} hasLocation={false} onRequestLocation={onRequestLocation} />);
-    await user.click(screen.getByRole('button', { name: 'Add my weather too' }));
-    expect(onRequestLocation).toHaveBeenCalled();
+  it('offers a single mood-only action', () => {
+    render(<MoodPicker onSubmit={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /weather/i })).not.toBeInTheDocument();
   });
 });
 

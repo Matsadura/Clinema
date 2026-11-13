@@ -119,7 +119,7 @@ def search(title, year, api_key):
     return _with_keys(_search, api_key, title, year)
 
 
-AI_FIELDS = {"personalized_reason": "why", "mood_weather_fit": "fit",
+AI_FIELDS = {"personalized_reason": "why", "mood_fit": "fit",
              "tone": "tone", "country": "country"}
 
 

@@ -89,7 +89,7 @@ def test_retry_when_model_ignores_exclusions(app, catalog, pool, fake_llm):
         return llm_reply(fake_llm.content)
 
     fake_llm.chat.completions.create = create
-    result = recommend(["Calm"], None, TEST_CONFIG,
+    result = recommend(["Calm"], TEST_CONFIG,
                        seen_ids=list(range(1, 17)))
     assert len(fake_llm.calls) == 2  # first round was entirely excluded
     assert {m["tmdb_id"] for m in result["movies"]}.isdisjoint(
@@ -108,7 +108,7 @@ def test_discover_backfill_respects_exclusions(app, catalog, pool,
                                                fake_llm):
     fake_llm.error = RuntimeError("LLM down")
     catalog.discover_ids = list(range(1, 31))
-    result = recommend(["Sad"], None, TEST_CONFIG,
+    result = recommend(["Sad"], TEST_CONFIG,
                        seen_ids=list(range(1, 11)))
     ids = {m["tmdb_id"] for m in result["movies"]}
     assert result["source"] == "fallback"
@@ -124,7 +124,7 @@ def test_disliked_genres_are_removed_from_fallback(app, client, catalog,
     catalog.add(98, "Twisty", 2001, ["Mystery"], "Y")
     fake_llm.error = RuntimeError("LLM down")
     catalog.discover_ids = [99, 98]
-    result = recommend(["Surprised"], None, TEST_CONFIG, user_id=user_id)
+    result = recommend(["Surprised"], TEST_CONFIG, user_id=user_id)
     assert [m["tmdb_id"] for m in result["movies"]] == [98]
     discover_calls = [c.request for c in mocked.calls
                       if "discover" in c.request.url]
@@ -172,8 +172,8 @@ def test_prompts_vary_between_identical_requests(app, catalog, pool,
                                                  fake_llm, monkeypatch):
     fake_llm.content = titles_payload(pool[:16])
     monkeypatch.setattr(llm, "random", random.Random(7))
-    recommend(["Calm"], None, TEST_CONFIG)
-    recommend(["Calm"], None, TEST_CONFIG)
+    recommend(["Calm"], TEST_CONFIG)
+    recommend(["Calm"], TEST_CONFIG)
     first, second = user_prompts(fake_llm)
     focus = [p.split("Diversity focus for this list:")[1].split("\n")[0]
              for p in (first, second)]
@@ -197,7 +197,7 @@ def test_at_most_one_overexposed_staple_and_unique_directors(
     items += [{"title": f"Gem {i}", "director": f"Auteur {i}"}
               for i in range(6, 20)]
     fake_llm.content = json.dumps({"movies": items})
-    result = recommend(["Excited"], None, TEST_CONFIG)
+    result = recommend(["Excited"], TEST_CONFIG)
     titles = [m["title"] for m in result["movies"]]
     staples = {"Inception", "Interstellar", "The Shawshank Redemption"}
     assert len(staples & set(titles)) == 1
@@ -212,7 +212,7 @@ def test_structured_fields_reach_the_client(client, catalog, fake_llm):
         "title": "Still Walking", "year": 2008, "genres": ["Drama"],
         "director": "Hirokazu Kore-eda", "country": "Japan",
         "tone": "gentle, wistful",
-        "mood_weather_fit": "A slow summer day for a reflective mood.",
+        "mood_fit": "A slow summer day for a reflective mood.",
         "personalized_reason": "You love quiet family dramas."}] + [
         {"title": f"Film {i}", "year": 2000} for i in range(2, 14)]})
     movie = client.post("/api/suggestions", json={

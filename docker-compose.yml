@@ -41,7 +41,6 @@ services:
     # needs — e.g. never the MySQL root password.
     environment:
       APP_ENV: ${APP_ENV:-production}
-      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:?Set OPENWEATHER_API_KEY in .env}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       TMDB_API_KEY: ${TMDB_API_KEY:?Set TMDB_API_KEY in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}

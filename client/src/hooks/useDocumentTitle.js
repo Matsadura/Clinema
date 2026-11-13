@@ -4,6 +4,6 @@ const SUFFIX = 'Clinema';
 
 export function useDocumentTitle(title) {
   useEffect(() => {
-    document.title = title ? `${title} · ${SUFFIX}` : `${SUFFIX} — Your mood & weather movie match`;
+    document.title = title ? `${title} · ${SUFFIX}` : `${SUFFIX} — Movies that match your mood`;
   }, [title]);
 }

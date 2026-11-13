@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import DiscoverPage from './DiscoverPage.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
-import { LocationProvider } from '../context/LocationContext.jsx';
 
 const movies = [
   { tmdb_id: 1, title: 'Amélie', year: 2001, rating: 7.9, poster: 'https://image.tmdb.org/a.jpg' },
@@ -15,11 +14,9 @@ function renderAt(url) {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <AuthProvider>
-        <LocationProvider>
-          <Routes>
-            <Route path="/discover" element={<DiscoverPage />} />
-          </Routes>
-        </LocationProvider>
+        <Routes>
+          <Route path="/discover" element={<DiscoverPage />} />
+        </Routes>
       </AuthProvider>
     </MemoryRouter>,
   );
@@ -36,7 +33,7 @@ describe('DiscoverPage', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('loads recommendations for the moods in the URL', async () => {
-    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'], weather: null, warning: null }));
+    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'] }));
     renderAt('/discover?moods=Calm,Bogus');
 
     expect(screen.getByLabelText('Loading movies')).toBeInTheDocument();
@@ -46,7 +43,7 @@ describe('DiscoverPage', () => {
   });
 
   it('explains when the AI fallback was used', async () => {
-    fetch.mockResolvedValue(ok({ movies, source: 'fallback', moods: ['Sad'], weather: null, warning: null }));
+    fetch.mockResolvedValue(ok({ movies, source: 'fallback', moods: ['Sad'] }));
     renderAt('/discover?moods=Sad');
     expect(await screen.findByText(/AI curator is unavailable/)).toBeInTheDocument();
   });
@@ -55,7 +52,7 @@ describe('DiscoverPage', () => {
     const user = userEvent.setup();
     fetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Movie database is not configured' }), { status: 503 }))
-      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Sad'], weather: null, warning: null }));
+      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Sad'] }));
     renderAt('/discover?moods=Sad');
 
     expect(await screen.findByText('Movie database is not configured')).toBeInTheDocument();
@@ -67,8 +64,8 @@ describe('DiscoverPage', () => {
     const user = userEvent.setup();
     const more = [{ tmdb_id: 3, title: 'Stalker', year: 1979, rating: 8.1, poster: 'https://image.tmdb.org/s.jpg' }];
     fetch
-      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Calm'], weather: null, warning: null }))
-      .mockResolvedValueOnce(ok({ movies: more, source: 'ai', moods: ['Calm'], weather: null, warning: null }));
+      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Calm'] }))
+      .mockResolvedValueOnce(ok({ movies: more, source: 'ai', moods: ['Calm'] }));
     renderAt('/discover?moods=Calm');
 
     await screen.findByText('Amélie');
@@ -82,7 +79,7 @@ describe('DiscoverPage', () => {
   it('shows the personalised badge and the AI explanation', async () => {
     const user = userEvent.setup();
     const explained = [{ ...movies[0], why: 'You love whimsical European comedies.', fit: 'Bright and gentle for a calm mood.', genres: ['Comedy'] }];
-    fetch.mockResolvedValue(ok({ movies: explained, source: 'ai', personalized: true, moods: ['Calm'], weather: null, warning: null }));
+    fetch.mockResolvedValue(ok({ movies: explained, source: 'ai', personalized: true, moods: ['Calm'] }));
     renderAt('/discover?moods=Calm');
 
     expect(await screen.findByText('Personalised for you')).toBeInTheDocument();
@@ -92,10 +89,11 @@ describe('DiscoverPage', () => {
     expect(why).toHaveTextContent('Bright and gentle for a calm mood.');
   });
 
-  it('asks for location before weather-based picks', async () => {
+  it('ignores the legacy weather parameter', async () => {
+    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'] }));
     renderAt('/discover?moods=Calm&weather=1');
-    expect(screen.getByRole('heading', { name: 'Share your location' })).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(await screen.findByText('Amélie')).toBeInTheDocument();
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ moods: ['Calm'] });
   });
 
   it('shows an empty state when nothing was requested', () => {
