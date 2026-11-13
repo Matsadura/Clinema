@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 const linkClass = ({ isActive }) =>
   `relative py-1 text-sm transition-colors duration-150 ${
-    isActive ? 'text-ink after:absolute after:inset-x-0 after:-bottom-[17px] after:h-px after:bg-accent' : 'text-muted hover:text-ink'
+    isActive ? 'text-ink after:absolute after:inset-x-0 after:-bottom-[17px] after:h-0.5 after:bg-accent' : 'text-muted hover:text-ink'
   }`;
 
 export function Avatar({ user, size = 'h-8 w-8 text-xs' }) {
@@ -100,9 +100,12 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <Link to="/auth" className="text-sm font-medium text-ink transition-colors hover:text-accent">
-              Sign in
-            </Link>
+            // Not repeated on the sign-in page itself
+            location.pathname !== '/auth' && (
+              <Link to="/auth" className="text-sm font-medium text-ink transition-colors hover:text-accent">
+                Sign in
+              </Link>
+            )
           )}
         </div>
 
@@ -142,11 +145,13 @@ export default function Navbar() {
                 </li>
               </>
             ) : (
-              <li>
-                <Link to="/auth" className="block py-3 text-base text-ink">
-                  Sign in
-                </Link>
-              </li>
+              location.pathname !== '/auth' && (
+                <li>
+                  <Link to="/auth" className="block py-3 text-base text-ink">
+                    Sign in
+                  </Link>
+                </li>
+              )
             )}
           </ul>
         </div>

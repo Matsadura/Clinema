@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp } from 'react-icons/fi';
 import { api } from '../lib/api.js';
-import { Alert, Skeleton } from './ui.jsx';
+import { Alert, Skeleton, textLink } from './ui.jsx';
 
 const LABELS = {
   genres: 'Genres',
@@ -14,27 +13,31 @@ const LABELS = {
   tones: 'Tone',
 };
 
-function Chips({ entries, tone }) {
-  const max = Math.max(...entries.map(([, score]) => Math.abs(score)), 1);
-  const styles = tone === 'negative' ? 'bg-red-500/10 text-red-100' : 'bg-primary/15 text-green-100';
+/** Values strongest-first; the strongest reads in full ink, the rest muted. */
+function Values({ entries, negative = false }) {
   return (
-    <ul className="flex flex-wrap gap-2">
-      {entries.map(([name, score]) => (
-        <li
-          key={name}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${styles}`}
-          style={{ opacity: 0.55 + 0.45 * (Math.abs(score) / max) }}
-          title={`Weight ${score > 0 ? '+' : ''}${score}`}
-        >
-          {name}
-        </li>
+    <dd className="text-sm">
+      {entries.map(([name, score], i) => (
+        <span key={name} title={`Weight ${score > 0 ? '+' : ''}${score}`}>
+          <span className={negative ? 'text-dislike' : i === 0 ? 'text-ink' : 'text-muted'}>{name}</span>
+          {i < entries.length - 1 && <span className="text-subtle">, </span>}
+        </span>
       ))}
-    </ul>
+    </dd>
   );
 }
 
-/** Shows what Clinema has learned from the user's likes, dislikes and
- *  browsing — the same profile that is summarised into AI prompts. */
+function Row({ label, children }) {
+  return (
+    <div className="grid gap-1 border-b border-line/[0.06] py-3 sm:grid-cols-[120px_1fr] sm:gap-4">
+      <dt className="text-sm text-subtle">{label}</dt>
+      {children}
+    </div>
+  );
+}
+
+/** What Clinema has learned from likes, dismissals and browsing: the same
+ *  profile that is summarised into AI prompts. */
 export default function TastePanel({ userId }) {
   const [state, setState] = useState({ status: 'loading', data: null, error: null });
 
@@ -47,48 +50,44 @@ export default function TastePanel({ userId }) {
     return () => controller.abort();
   }, [userId]);
 
-  return (
-    <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6" aria-labelledby="taste-heading">
-      <h2 id="taste-heading" className="flex items-center gap-2 text-lg font-bold">
-        <FiTrendingUp className="text-primary-light" aria-hidden="true" /> Your taste
-      </h2>
-      <p className="mt-1 text-sm text-white/60">
-        Learned from the films you like, dismiss and open. It shapes every recommendation.
-      </p>
+  if (state.status === 'loading') {
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-5 w-1/2" />
+      </div>
+    );
+  }
+  if (state.status === 'error') return <Alert>{state.error}</Alert>;
 
-      {state.status === 'loading' && (
-        <div className="mt-4 space-y-2" aria-busy="true">
-          <Skeleton className="h-6 w-2/3" />
-          <Skeleton className="h-6 w-1/2" />
-        </div>
-      )}
-      {state.status === 'error' && <Alert className="mt-4">{state.error}</Alert>}
-      {state.status === 'ready' && !state.data.personalized && (
-        <p className="mt-4 rounded-xl border border-dashed border-white/15 p-4 text-sm text-white/60">
-          Nothing learned yet. <Link to="/#mood" className="font-semibold text-primary-light hover:underline">Get some picks</Link>{' '}
-          and tap ❤️ or 👎 on a few — your profile appears here.
-        </p>
-      )}
-      {state.status === 'ready' && state.data.personalized && (
-        <div className="mt-5 space-y-5">
-          {Object.keys(LABELS)
-            .filter((kind) => state.data.profile.likes?.[kind]?.length)
-            .map((kind) => [kind, state.data.profile.likes[kind]])
-            .map(([kind, entries]) => (
-            <div key={kind}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">{LABELS[kind] || kind}</h3>
-              <Chips entries={entries} />
-            </div>
+  const { profile, personalized } = state.data;
+  if (!personalized) {
+    return (
+      <p className="max-w-prose text-sm text-muted">
+        Nothing learned yet. <Link to="/" className={textLink}>Get some picks</Link> and like or dismiss a few — your
+        profile appears here.
+      </p>
+    );
+  }
+
+  const dislikes = Object.values(profile.dislikes || {}).flat();
+  return (
+    <div>
+      <dl className="border-t border-line/[0.06]">
+        {Object.keys(LABELS)
+          .filter((kind) => profile.likes?.[kind]?.length)
+          .map((kind) => (
+            <Row key={kind} label={LABELS[kind]}>
+              <Values entries={profile.likes[kind]} />
+            </Row>
           ))}
-          {Object.keys(state.data.profile.dislikes || {}).length > 0 && (
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">Steering away from</h3>
-              <Chips entries={Object.values(state.data.profile.dislikes).flat()} tone="negative" />
-            </div>
-          )}
-          <p className="text-xs text-white/40">Based on {state.data.profile.interactions} interactions.</p>
-        </div>
-      )}
-    </section>
+        {dislikes.length > 0 && (
+          <Row label="Steering away from">
+            <Values entries={dislikes} negative />
+          </Row>
+        )}
+      </dl>
+      <p className="num mt-3 text-xs text-subtle">Based on {profile.interactions} interactions.</p>
+    </div>
   );
 }
