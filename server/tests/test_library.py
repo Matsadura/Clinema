@@ -36,7 +36,8 @@ def test_clearing_both_flags_removes_entry(client):
     client.put(f"/api/{uid}/library/1", headers=h, json={"like": True})
     res = client.put(f"/api/{uid}/library/1", headers=h,
                      json={"like": False})
-    assert res.get_json() == {"movie_id": 1, "like": False, "save": False}
+    assert res.get_json() == {"movie_id": 1, "like": False, "save": False,
+                              "dislike": False}
     assert client.get(f"/api/{uid}/library", headers=h).get_json() == []
 
 

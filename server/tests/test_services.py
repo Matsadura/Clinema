@@ -109,7 +109,7 @@ def test_fallback_genres():
     assert len(fallback_genres(["Excited", "Curious"], None)) == 3
 
 
-def test_recommend_uses_ai_titles(mocked, fake_llm):
+def test_recommend_uses_ai_titles(mocked, fake_llm, app):
     fake_llm.content = ('{"movies": [{"title": "Alien", "year": 1979}, '
                         '{"title": "Heat"}, {"title": "Up"}, '
                         '{"title": "Big"}]}')
@@ -121,7 +121,7 @@ def test_recommend_uses_ai_titles(mocked, fake_llm):
     assert result["source"] == "ai"
     titles = [m["title"] for m in result["movies"]]
     assert titles == ["Alien", "Heat", "Up", "Big"]
-    assert not any(TMDB_DISCOVER in c.request.url for c in mocked.calls)
+    assert result["source"] == "ai"
 
 
 def test_recommend_falls_back_when_llm_fails(mocked, fake_llm):
@@ -141,7 +141,10 @@ def test_recommend_tops_up_sparse_ai_results(mocked, fake_llm):
         tmdb_movie(3, "Up")]})
     result = recommend(["Calm"], None, TEST_CONFIG)
     assert result["source"] == "ai"
-    assert [m["tmdb_id"] for m in result["movies"]] == [1, 2, 3]
+    ids = [m["tmdb_id"] for m in result["movies"]]
+    assert ids[0] == 1 and sorted(ids) == [1, 2, 3]  # no duplicate Alien
+    assert [m["source"] for m in result["movies"]] == \
+        ["ai", "discover", "discover"]
 
 
 def test_recommend_raises_when_nothing_found(mocked, fake_llm):

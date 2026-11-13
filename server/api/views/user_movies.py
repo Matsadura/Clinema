@@ -1,11 +1,16 @@
 #!/usr/bin/python3
 """
-A user's movie library (liked / saved flags). All routes require a JWT whose
-user matches ``<user_id>``.
+A user's movie library (like / save / dislike flags) and preference-learning
+signals. All routes require a JWT whose user matches ``<user_id>``.
+
+Every flag change and every viewed movie is logged as a weighted
+interaction and immediately folded into the user's taste profile.
 
 Routes:
     - GET    /<user_id>/library                  All entries + movie details
-    - PUT    /<user_id>/library/<tmdb_id>        Upsert {like?, save?}
+    - PUT    /<user_id>/library/<tmdb_id>        Upsert {like, save, dislike}
+    - POST   /<user_id>/interactions             Log a view {movie_id}
+    - GET    /<user_id>/taste                    Learned taste profile
     - GET    /<user_id>/user_movies              All raw entries
     - GET    /<user_id>/liked | /<user_id>/save  Filtered entries + details
     - POST   /<user_id>/liked | /<user_id>/save  Create entry (legacy)
@@ -14,14 +19,17 @@ Routes:
 """
 from flask import current_app, jsonify, request
 
-from api.services import tmdb
+from api.services import taste, tmdb
 from api.views import app_views
 from api.views.helpers import (error, json_body, movies_by_tmdb_id,
                                owner_required, upsert_movies)
 from models import storage
 from models.user_movie import User_Movie
 
-FLAGS = ('like', 'save')
+FLAGS = ('like', 'save', 'dislike')
+# flag -> (event when set, event when cleared)
+FLAG_EVENTS = {'like': ('like', 'unlike'), 'dislike': ('dislike', 'undislike'),
+               'save': ('save', 'unsave')}
 
 
 def _with_movies(entries):
@@ -80,10 +88,28 @@ def library(user):
     return jsonify(_with_movies(_user_entries(user)))
 
 
+def _learn(user, tmdb_ids):
+    """Enrich the movies' taste features and rebuild the user's profile."""
+    try:
+        taste.ensure_features(tmdb_ids,
+                              current_app.config.get("TMDB_API_KEY"))
+        profile = taste.refresh_profile(user.id)
+        storage.save()
+        return profile
+    except Exception:  # noqa: BLE001 - learning must never break the UI
+        current_app.logger.exception("Taste profile update failed")
+        storage.rollback()
+        return None
+
+
 @app_views.put('/<user_id>/library/<int:tmdb_id>')
 @owner_required
 def set_library_flags(tmdb_id, user):
-    """Create/update the like/save flags for a movie in one call."""
+    """Create/update the like/save/dislike flags for a movie in one call.
+
+    Like and dislike are mutually exclusive. Each change is logged as a
+    weighted interaction and the taste profile is refreshed.
+    """
     data = json_body()
     if data is None:
         return error('Invalid data')
@@ -92,23 +118,69 @@ def set_library_flags(tmdb_id, user):
     except ValueError as exc:
         return error(str(exc))
     if not flags:
-        return error('Provide like and/or save')
+        return error('Provide like, save and/or dislike')
+    if flags.get('like') and flags.get('dislike'):
+        return error('A movie cannot be both liked and disliked')
+    if flags.get('like'):
+        flags.setdefault('dislike', False)
+    if flags.get('dislike'):
+        flags.setdefault('like', False)
 
     entry = storage.get_specific_double(
         User_Movie, 'user_id', user.id, 'movie_id', tmdb_id)
     if entry is None:
         entry = User_Movie(user_id=user.id, movie_id=tmdb_id,
-                           like=False, save=False)
+                           like=False, save=False, dislike=False)
         storage.new(entry)
     for flag, value in flags.items():
+        if bool(getattr(entry, flag)) != value:
+            taste.record_event(user.id, tmdb_id,
+                               FLAG_EVENTS[flag][0 if value else 1])
         setattr(entry, flag, value)
 
-    if not entry.like and not entry.save:
+    if not entry.like and not entry.save and not entry.dislike:
         storage.delete(entry)
-        storage.save()
-        return jsonify({'movie_id': tmdb_id, 'like': False, 'save': False})
+        result = {'movie_id': tmdb_id, 'like': False, 'save': False,
+                  'dislike': False}
+    else:
+        result = entry.to_dict()
     storage.save()
-    return jsonify(entry.to_dict())
+    _learn(user, [tmdb_id])
+    return jsonify(result)
+
+
+@app_views.post('/<user_id>/interactions')
+@owner_required
+def log_interaction(user):
+    """Record a browsing signal. Body: {"movie_id": int, "event": "view"}.
+
+    Like/dislike/save are recorded through the library endpoint.
+    """
+    data = json_body()
+    if data is None:
+        return error('Invalid data')
+    movie_id = data.get('movie_id')
+    if isinstance(movie_id, bool) or not isinstance(movie_id, int) or \
+            movie_id <= 0:
+        return error('movie_id must be a positive integer')
+    event = data.get('event', 'view')
+    if event != 'view':
+        return error("Only 'view' events can be logged here")
+    taste.record_event(user.id, movie_id, 'view')
+    storage.save()
+    profile = _learn(user, [movie_id])
+    return jsonify({'recorded': True,
+                    'interactions': (profile or {}).get('interactions')}), 201
+
+
+@app_views.get('/<user_id>/taste')
+@owner_required
+def get_taste(user):
+    """The learned taste profile and the summary injected into prompts."""
+    profile = taste.get_profile(user.id)
+    return jsonify({'profile': profile,
+                    'summary': taste.summarize(profile),
+                    'personalized': taste.has_signal(profile)})
 
 
 @app_views.get('/<user_id>/user_movies')
@@ -130,6 +202,13 @@ def save_movies(user):
 def liked_movies(user):
     """Liked movies with details."""
     return jsonify(_with_movies(_user_entries(user, 'like')))
+
+
+@app_views.get('/<user_id>/disliked')
+@owner_required
+def disliked_movies(user):
+    """Disliked movies with details."""
+    return jsonify(_with_movies(_user_entries(user, 'dislike')))
 
 
 @app_views.post('/<user_id>/save')

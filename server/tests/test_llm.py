@@ -37,7 +37,8 @@ def test_parse_titles_never_executes_code(tmp_path):
 
 def test_parse_titles_caps_results():
     content = "[" + ",".join(f'"Film {i}"' for i in range(50)) + "]"
-    assert len(llm.parse_titles(content)) == llm.MAX_TITLES
+    assert len(llm.parse_titles(content)) == \
+        llm.MAX_TITLES + llm.EXTRA_CANDIDATES
 
 
 def test_build_user_prompt_includes_inputs():
@@ -51,14 +52,19 @@ def test_suggest_titles_requires_key():
         llm.suggest_titles(["Calm"], "", "", "model")
 
 
-def test_suggest_titles_caches_and_uses_json_mode(fake_llm):
+def test_suggest_titles_is_not_cached_and_uses_strict_schema(fake_llm):
+    """Identical requests must reach the model every time (no stale
+    repeats) and ask for the strict structured-output schema."""
     fake_llm.content = '{"movies": [{"title": "Paddington", "year": 2014}]}'
-    first = llm.suggest_titles(["Calm"], "sunny", "key", "model")
-    second = llm.suggest_titles(["Calm"], "sunny", "key", "model")
-    assert first == second == [{"title": "Paddington", "year": 2014}]
-    assert len(fake_llm.calls) == 1
-    assert fake_llm.calls[0]["response_format"] == {"type": "json_object"}
+    llm.suggest_titles(["Calm"], "sunny", "key", "model")
+    llm.suggest_titles(["Calm"], "sunny", "key", "model")
+    assert len(fake_llm.calls) == 2
+    fmt = fake_llm.calls[0]["response_format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["json_schema"]["strict"] is True
     assert fake_llm.calls[0]["messages"][0]["role"] == "system"
+    assert fake_llm.calls[0]["temperature"] == 0.85
+    assert fake_llm.calls[0]["presence_penalty"] > 0
 
 
 def test_circuit_breaker_skips_llm_after_failure(monkeypatch):
