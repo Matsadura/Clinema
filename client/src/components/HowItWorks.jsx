@@ -1,4 +1,4 @@
-import { FiCloudDrizzle, FiCpu, FiFilm, FiSmile } from 'react-icons/fi';
+import { FiCpu, FiFilm, FiSmile, FiTrendingUp } from 'react-icons/fi';
 
 const STEPS = [
   {
@@ -7,19 +7,19 @@ const STEPS = [
     body: 'Pick one or more moods — from joyful to reflective.',
   },
   {
-    icon: FiCloudDrizzle,
-    title: 'Add your weather',
-    body: 'Optionally share your location. We look up the live conditions with OpenWeather.',
-  },
-  {
     icon: FiCpu,
     title: 'AI curates a list',
-    body: 'An open-weight LLM on Groq suggests films that fit the mood and the moment.',
+    body: 'An open-weight LLM on Groq suggests varied, less-obvious films that fit your mood — never the same list twice.',
   },
   {
     icon: FiFilm,
     title: 'Enriched with TMDB',
-    body: 'Each title is matched on TMDB for posters, ratings and synopses. Like or save the ones you love.',
+    body: 'Each title is matched on TMDB for posters, ratings and synopses, with a note on why it was picked.',
+  },
+  {
+    icon: FiTrendingUp,
+    title: 'Learns your taste',
+    body: 'Like, save or dismiss films and Clinema learns the genres, directors and eras you love — and what to avoid.',
   },
 ];
 

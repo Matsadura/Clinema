@@ -17,7 +17,6 @@ const entry = (provider, label, extra = {}) => ({
 const KEYS = [
   entry('groq', 'Groq (AI recommendations)'),
   entry('tmdb', 'TMDB (movie data & posters)', { configured: true, last4: 'ab12', status: 'valid' }),
-  entry('openweather', 'OpenWeather (local weather)', { configured: true, last4: 'zz99', status: 'invalid' }),
 ];
 const row = (name) => screen.getByRole('heading', { name }).closest('li');
 
@@ -30,7 +29,12 @@ describe('ApiKeysPanel', () => {
     render(<ApiKeysPanel userId="u1" />);
     expect(await screen.findByText('Using Clinema’s key')).toBeInTheDocument();
     expect(screen.getByText(/Your key ••••ab12/)).toBeInTheDocument();
-    expect(screen.getByText(/••••zz99 was rejected — using Clinema’s/)).toBeInTheDocument();
+  });
+
+  it('flags a key the provider rejected', async () => {
+    fetch.mockResolvedValue(json([{ ...KEYS[0], configured: true, last4: 'zz99', status: 'invalid' }, KEYS[1]]));
+    render(<ApiKeysPanel userId="u1" />);
+    expect(await screen.findByText(/••••zz99 was rejected — using Clinema’s/)).toBeInTheDocument();
   });
 
   it('verifies and saves a key, then masks it', async () => {

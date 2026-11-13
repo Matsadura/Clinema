@@ -15,11 +15,11 @@ const TEAM = [
 const STACK = [
   { group: 'Frontend', items: ['React 18', 'React Router', 'Vite', 'Tailwind CSS'] },
   { group: 'Backend', items: ['Flask 3', 'SQLAlchemy 2', 'JWT auth', 'Gunicorn'] },
-  { group: 'Data & AI', items: ['Groq · GPT-OSS 120B', 'TMDB API', 'OpenWeather API', 'MySQL 8'] },
+  { group: 'Data & AI', items: ['Groq · GPT-OSS 120B', 'TMDB API', 'Taste profiles', 'MySQL 8'] },
   { group: 'Ops', items: ['Docker multi-stage', 'Nginx', 'Compose healthchecks', 'Pytest · Vitest'] },
 ];
 
-const FLOW = ['Browser (React SPA)', 'Nginx', 'Flask API', 'OpenWeather · Groq · TMDB', 'MySQL'];
+const FLOW = ['Browser (React SPA)', 'Nginx', 'Flask API', 'Groq · TMDB', 'MySQL'];
 
 export default function AboutPage() {
   useDocumentTitle('How it works');
@@ -27,10 +27,11 @@ export default function AboutPage() {
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <header className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wider text-primary-light">About Clinema</p>
-        <h1 className="mt-2 text-4xl font-extrabold sm:text-5xl">A movie picker that reads the room — and the sky.</h1>
+        <h1 className="mt-2 text-4xl font-extrabold sm:text-5xl">A movie picker that reads the room — and learns your taste.</h1>
         <p className="mt-5 text-lg text-white/70">
-          Choosing a film is harder than watching one. Clinema blends how you feel with the weather where you are and
-          asks an AI curator for films that suit the moment, then enriches every pick with real data from TMDB.
+          Choosing a film is harder than watching one. Tell Clinema how you feel and an AI curator suggests films that
+          suit the moment, enriched with real data from TMDB. Every like and dismiss refines a taste profile, so the
+          picks get more personal — and never repeat.
         </p>
       </header>
 
@@ -46,8 +47,8 @@ export default function AboutPage() {
           <h2 id="arch-heading" className="text-2xl font-bold">Architecture</h2>
           <p className="mt-3 text-white/70">
             The React app is served by Nginx, which also proxies <code className="rounded bg-white/10 px-1">/api</code> to
-            a Flask API running under Gunicorn. API keys never reach the browser: the API calls OpenWeather, Groq and TMDB
-            server-side, caches responses, and falls back to genre-based TMDB discovery if the AI is unavailable.
+            a Flask API running under Gunicorn. API keys never reach the browser: the API calls Groq and TMDB server-side,
+            blends in your learned taste profile, and falls back to genre-based TMDB discovery if the AI is unavailable.
           </p>
           <ol className="mt-6 flex flex-wrap items-center gap-2 text-sm">
             {FLOW.map((step, i) => (

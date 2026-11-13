@@ -4,10 +4,10 @@ import { MAX_MOODS, filterMoods } from '../lib/moods.js';
 import { Button } from './ui.jsx';
 
 /**
- * Mood chips + actions.
- * onSubmit({ moods, withWeather }) is called when the user asks for picks.
+ * Mood chips + submit action.
+ * onSubmit({ moods }) is called when the user asks for picks.
  */
-export default function MoodPicker({ onSubmit, hasLocation, onRequestLocation, locating }) {
+export default function MoodPicker({ onSubmit }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
@@ -74,19 +74,10 @@ export default function MoodPicker({ onSubmit, hasLocation, onRequestLocation, l
         )}
       </div>
 
-      <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button size="lg" disabled={!selected.length} onClick={() => onSubmit({ moods: selected, withWeather: false })}>
+      <div className="mt-4 flex justify-center">
+        <Button size="lg" disabled={!selected.length} onClick={() => onSubmit({ moods: selected })}>
           Match my mood
         </Button>
-        {hasLocation ? (
-          <Button size="lg" variant="outline" disabled={!selected.length} onClick={() => onSubmit({ moods: selected, withWeather: true })}>
-            Mood + weather
-          </Button>
-        ) : (
-          <Button size="lg" variant="ghost" onClick={onRequestLocation} loading={locating}>
-            Add my weather too
-          </Button>
-        )}
       </div>
     </div>
   );
