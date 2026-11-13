@@ -138,9 +138,9 @@ def _get_client(api_key, timeout):
 
 
 # -- prompt --------------------------------------------------------------
-def pick_focus(rng=random, k=2):
+def pick_focus(rng=None, k=2):
     """Choose ``k`` diversity constraints for this request."""
-    return rng.sample(DIVERSITY_FOCUS, k)
+    return (rng or random).sample(DIVERSITY_FOCUS, k)
 
 
 def build_user_prompt(moods, weather_desc, count=MAX_TITLES, taste="",
