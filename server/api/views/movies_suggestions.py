@@ -1,116 +1,94 @@
 #!/usr/bin/python3
-""" This script gets the mood keyword and weather
-information from the front """
+"""AI movie suggestion routes.
+
+``POST /api/suggestions`` is the primary endpoint. The original
+``/movies_by_*`` routes are kept for backwards compatibility.
+"""
+from flask import current_app, jsonify
+
+from api.extensions import limiter
+from api.services import ServiceError
+from api.services.recommender import parse_moods, recommend
+from api.services.weather import get_weather
 from api.views import app_views
-from flask import jsonify, request  # type: ignore
-from api.views.weather import get_weather
-from groq import Groq  # type: ignore
-from api.app import GROQ_API_KEY
+from api.views.helpers import error, json_body, upsert_movies
+
+SUGGESTION_LIMIT = "20 per minute; 200 per day"
 
 
-def suggest_movie(mood=None, weather=None):
-    """
-    - Suggests a movie based on the provided mood and/or weather.
-    - Parameters:
-        - mood (str): The mood keyword for suggesting a movie.
-        - weather (str): The weather information for suggesting a movie.
-    - Returns:
-        - A list of suggested movies based on the mood and/or weather.
-    """
-
-    client = Groq(api_key=GROQ_API_KEY)
-
-    # Prepare the content for the request based on available information
-    if mood and weather:
-        content = f"Suggest a list of movies that complement the mood '{mood}\
-            'based on the current weather conditions: {weather}. Provide the \
-                content in array format [\"movie1\", \"movie2\", ... , \"movie\
-                    n\"]. Don't write anything but the array."
-    elif mood:
-        content = f"Suggest a list of movies that complement the mood '{mood}\
-            '. Provide the content in array format [\"movie1\", \"movie2\",\
-                  ... , \"movien\"]. Don't write anything but the array."
-    elif weather:
-        content = f"Suggest a list of movies based on the current weather \
-            conditions: {weather}. Provide the content in array format \
-                [\"movie1\", \"movie2\", ... , \"movien\"]. Don't write \
-                anything but the array."
-    else:
-        content = "Suggest a list of movies. Provide the content in array \
-            format [\"movie1\", \"movie2\", ... , \"movien\"].\
-                  Don't write anything but the array."
-
-    completion = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[
-            {
-                "role": "user",
-                "content": content
-            }
-        ],
-        temperature=1,
-        max_tokens=2024,
-        top_p=1,
-        stream=False,
-        stop=None,
-    )
-
-    response_content = completion.choices[0].message.content
+def _run(data, need_mood=False, need_location=False):
+    """Validate input, run the pipeline and build the JSON response."""
+    if data is None:
+        return error("Request body must be a JSON object")
     try:
-        suggestions = eval(response_content)
-        if isinstance(suggestions, list):
-            return suggestions
-        else:
-            return []
-    except Exception as e:
-        return []
+        moods = parse_moods(data.get('mood', data.get('moods')))
+    except ValueError as exc:
+        return error(str(exc))
+
+    lat, lon = data.get('latitude'), data.get('longitude')
+    has_location = lat not in (None, "") and lon not in (None, "")
+
+    if need_mood and not moods:
+        return error("Select at least one mood")
+    if need_location and not has_location:
+        return error("Latitude and longitude are required")
+    if not moods and not has_location:
+        return error("Provide a mood, a location, or both")
+
+    config = current_app.config
+    weather, weather_error = None, None
+    if has_location:
+        try:
+            weather = get_weather(lat, lon, config["OPENWEATHER_API_KEY"])
+        except ValueError as exc:
+            return error(str(exc))
+        except ServiceError as exc:
+            if need_location and not moods:
+                raise
+            weather_error = exc.message  # degrade to mood-only
+
+    result = recommend(moods, weather, config)
+    upsert_movies(result["movies"])
+    return jsonify({
+        "movies": result["movies"],
+        "suggestions": result["titles"],
+        "source": result["source"],
+        "moods": moods,
+        "weather": weather,
+        "warning": weather_error,
+    })
+
+
+@app_views.route('/suggestions', methods=['POST'])
+@limiter.limit(SUGGESTION_LIMIT)
+def suggestions():
+    """Body: {"moods": [..]?, "latitude": n?, "longitude": n?}"""
+    return _run(json_body())
 
 
 @app_views.route('/movies_by_mood_and_weather', methods=['POST'])
+@limiter.limit(SUGGESTION_LIMIT)
 def movie_suggestion_mood_weather():
     """Get movie suggestions based on mood and weather"""
-    data = request.get_json()
-    mood = data.get('mood')
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
-
-    if not mood or not latitude or not longitude:
-        return jsonify({"error": "Mood, latitude, and \
-                        longitude are required"}), 400
-
-    weather = get_weather(latitude, longitude)
-
-    suggestions = suggest_movie(mood, weather)
-
-    return jsonify({"suggestions": suggestions}), 201
+    return _run(json_body(), need_mood=True, need_location=True)
 
 
 @app_views.route('/movies_by_mood', methods=['POST'])
+@limiter.limit(SUGGESTION_LIMIT)
 def movie_suggestion_mood_only():
     """Get movie suggestions based on mood only"""
-    data = request.get_json()
-    mood = data.get('mood')
-
-    if not mood:
-        return jsonify({"error": "Mood is required"}), 400
-
-    # Suggest movies based on mood only
-    suggestions = suggest_movie(mood=mood)
-    return jsonify({"suggestions": suggestions}), 201
+    data = json_body()
+    if data is not None:
+        data = {"mood": data.get("mood")}
+    return _run(data, need_mood=True)
 
 
 @app_views.route('/movies_by_weather', methods=['POST'])
+@limiter.limit(SUGGESTION_LIMIT)
 def movie_suggestion_weather_only():
     """Get movie suggestions based on weather only"""
-    data = request.get_json()
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
-
-    if not latitude or not longitude:
-        return jsonify({"error": "Latitude and longitude are required"}), 400
-
-    weather = get_weather(latitude, longitude)
-
-    suggestions = suggest_movie(weather=weather)
-
-    return jsonify({"suggestions": suggestions})
+    data = json_body()
+    if data is not None:
+        data = {"latitude": data.get("latitude"),
+                "longitude": data.get("longitude")}
+    return _run(data, need_location=True)

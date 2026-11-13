@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-"""Holds class User_Movie"""
-from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
+"""Holds class User_Movie (a user's like/save flags for a movie)."""
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
+from models.base_model import Base, BaseModel
 
 
 class User_Movie(BaseModel, Base):
-    """Representation of a vault """
+    """Relationship between a user and a TMDB movie id."""
     __tablename__ = 'user_movies'
     user_id = Column(String(128),
                      ForeignKey('users.id', ondelete='CASCADE'),
-                     nullable=False)
-    # movie_id = Column(String(128),
-    #                   ForeignKey('movies.id', ondelete='CASCADE'),
-    #                   nullable=False)
+                     nullable=False, index=True)
+    # TMDB id of the movie (matches Movie.tmdb_id)
     movie_id = Column(Integer, nullable=False)
-    save = Column(Boolean, nullable=True)
-    like = Column(Boolean, nullable=True)
-    # movie = relationship("Movie", back_populates="user_movies")
-    user = relationship("User", back_populates="user_movies",)
-
-    def __init__(self, *args, **kwargs):
-        """initializes vault"""
-        super().__init__(*args, **kwargs)
+    save = Column(Boolean, nullable=True, default=False)
+    like = Column(Boolean, nullable=True, default=False)
+    user = relationship("User", back_populates="user_movies")

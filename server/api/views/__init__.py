@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 """ Contains the flask blueprint """
-from flask import Blueprint  # type: ignore
+from flask import Blueprint
 
 app_views = Blueprint('app_views', __name__, url_prefix="/api")
 
-from api.views.index import *  # nopep8
-from api.views.auth import *  # nopep8
-from api.views.movies import *  # nopep8
-from api.views.movies_suggestions import *  # nopep8
-from api.views.users import *  # nopep8
-from api.views.user_movies import *  # nopep8
-from api.views.weather import *  # nopep8
+from api.views.index import *  # noqa: E402,F401,F403
+from api.views.auth import *  # noqa: E402,F401,F403
+from api.views.movies import *  # noqa: E402,F401,F403
+from api.views.movies_suggestions import *  # noqa: E402,F401,F403
+from api.views.users import *  # noqa: E402,F401,F403
+from api.views.user_movies import *  # noqa: E402,F401,F403
+from api.views.weather import *  # noqa: E402,F401,F403
