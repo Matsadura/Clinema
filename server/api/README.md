@@ -100,6 +100,19 @@ Legacy aliases with the same response: `POST /movies_by_mood` (`{mood}`), `POST 
 | POST | `/<user_id>/liked`, `/<user_id>/save` | Legacy create: `{movie_id, like?, save?}`. `409` if the entry exists. |
 | PUT / DELETE | `/<user_id>/liked/<entry_id>`, `/<user_id>/save/<entry_id>` | Update or delete one of your own entries |
 
+## Bring-your-own API keys 🔒
+
+Providers: `groq`, `tmdb`, `openweather`. A user's own key is tried first for that user's requests; if it's
+missing or rejected, the server's key is used. Rejected keys are marked `invalid`.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/<user_id>/api-keys` | `[{provider, label, docs_url, configured, last4, status, validated_at, fallback_available}]` |
+| PUT | `/<user_id>/api-keys/<provider>` | `{"key": "..."}` is verified with the provider, then stored encrypted. `200` returns the masked entry. `400` means invalid or rejected, `502` means the provider couldn't verify it, and `404` means an unknown provider. Limited to 10 per hour. |
+| DELETE | `/<user_id>/api-keys/<provider>` | Remove the key and fall back to the server's. `404` if none was saved. |
+
+`POST /suggestions` responses include `key_sources`, e.g. `{"groq": "user", "tmdb": "server", "openweather": "server"}`.
+
 ## Users 🔒
 
 | Method | Path | Description |
