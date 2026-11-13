@@ -108,3 +108,44 @@ def test_history_is_private(client):
     other, _ = register_and_login(client, email="bob@example.com")
     assert client.get(f"/api/{other}/history", headers=h).status_code == 403
     assert client.get(f"/api/{other}/history").status_code == 401
+
+
+def test_concurrent_duplicate_does_not_drop_the_batch(app, monkeypatch):
+    """Regression: a film inserted by a racing request used to roll back
+    every other film in the batch."""
+    from api.views import helpers
+    from models.movie import Movie
+
+    with app.test_request_context():
+        storage.new(Movie(tmdb_id=1, title="Already there"))
+        storage.save()
+        # Simulate the race: this request didn't see film 1 when it looked
+        real_query = storage.session.query
+
+        class Blind:
+            def __init__(self, q):
+                self.q = q
+
+            def filter(self, *a, **k):
+                return []
+
+        monkeypatch.setattr(storage.session, "query",
+                            lambda *a, **k: Blind(real_query(*a, **k)))
+        helpers.upsert_movies([
+            {"tmdb_id": 1, "title": "Already there"},
+            {"tmdb_id": 2, "title": "New A"},
+            {"tmdb_id": 3, "title": "New B"},
+        ])
+        monkeypatch.undo()
+        titles = sorted(m.title for m in storage.session.query(Movie))
+    assert titles == ["Already there", "New A", "New B"]
+
+
+def test_history_backfills_films_missing_from_cache(client, catalog):
+    uid, h = register_and_login(client)
+    catalog.add(77, "Tokyo Story", 1953, ["Drama"], "Ozu")
+    storage.new(Interaction(user_id=uid, movie_id=77, event="recommended",
+                            weight=0))
+    storage.save()
+    data = client.get(f"/api/{uid}/history", headers=h).get_json()
+    assert data[0]["movie"]["title"] == "Tokyo Story"

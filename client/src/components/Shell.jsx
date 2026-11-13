@@ -199,7 +199,7 @@ export function Topbar() {
   return (
     <header
       className={`sticky top-0 z-40 border-b transition-colors duration-200 ${
-        scrolled ? 'border-line/[0.08] bg-canvas/95' : 'border-line/[0.08] bg-canvas lg:border-transparent lg:bg-transparent'
+        scrolled ? 'border-line/[0.08] bg-canvas' : 'border-line/[0.08] bg-canvas lg:border-transparent lg:bg-transparent'
       }`}
     >
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink">

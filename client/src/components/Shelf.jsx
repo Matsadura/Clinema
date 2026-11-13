@@ -51,7 +51,7 @@ export default function Shelf({ title, movies, loading = false, seeAll }) {
       </SectionHeading>
       <ul
         ref={scroller}
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto scroll-smooth px-4 pb-2 sm:scroll-px-0 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {(loading ? Array.from({ length: 6 }, (_, i) => ({ tmdb_id: `s${i}` })) : movies).map((movie) => {
           const entry = library.entries[movie.tmdb_id] || {};

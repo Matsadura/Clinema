@@ -34,20 +34,24 @@ FLAG_EVENTS = {'like': ('like', 'unlike'), 'dislike': ('dislike', 'undislike'),
                'save': ('save', 'unsave'), 'seen': ('seen', 'unseen')}
 
 
-def _with_movies(entries, user=None):
-    """Serialise entries, embedding cached movie details (one query).
-
-    Movies missing from the local cache (e.g. rows created by the original
-    prototype) are fetched from TMDB once and stored.
-    """
-    movies = movies_by_tmdb_id({e.movie_id for e in entries})
-    missing = [e.movie_id for e in entries if e.movie_id not in movies]
+def _movies_with_backfill(tmdb_ids, user=None, limit=20):
+    """{tmdb_id: movie_dict} from the local cache; films missing from it
+    (e.g. rows from the original prototype) are fetched from TMDB once and
+    stored."""
+    movies = movies_by_tmdb_id(tmdb_ids)
+    missing = [i for i in tmdb_ids if i not in movies][:limit]
     if missing:
-        key = request_keys(user)["tmdb"]
-        fetched = [m for m in (tmdb.details(i, key) for i in missing[:20])
-                   if m]
+        keys = request_keys(user)["tmdb"]
+        fetched = [m for m in (tmdb.details(i, keys) for i in missing) if m]
         upsert_movies(fetched)
         movies.update({m["tmdb_id"]: m for m in fetched})
+    return movies
+
+
+def _with_movies(entries, user=None):
+    """Serialise entries, embedding movie details (one query, plus a TMDB
+    backfill for anything not cached)."""
+    movies = _movies_with_backfill({e.movie_id for e in entries}, user)
     result = []
     for entry in entries:
         data = entry.to_dict()
@@ -213,7 +217,7 @@ def history(user):
                 entry['moods'] = json.loads(row.context).get('moods') or []
             except ValueError:
                 pass
-    movies = movies_by_tmdb_id(set(grouped))
+    movies = _movies_with_backfill(set(grouped), user)
     for movie_id, entry in grouped.items():
         entry['movie'] = movies.get(movie_id)
     return jsonify(list(grouped.values()))
