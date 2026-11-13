@@ -6,6 +6,7 @@ import { Avatar } from '../components/Navbar.jsx';
 import { Alert, Button } from '../components/ui.jsx';
 import Modal from '../components/Modal.jsx';
 import TastePanel from '../components/TastePanel.jsx';
+import ApiKeysPanel from '../components/ApiKeysPanel.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const inputClass =
@@ -110,6 +111,8 @@ export default function ProfilePage() {
       </form>
 
       <TastePanel userId={user.id} />
+
+      <ApiKeysPanel userId={user.id} />
 
       <section className="mt-8 rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
         <h2 className="text-lg font-bold">Delete account</h2>
