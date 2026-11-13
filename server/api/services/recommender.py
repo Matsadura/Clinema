@@ -1,5 +1,5 @@
 """Recommendation pipeline:
-(moods, weather, taste profile, exclusions) -> AI titles -> TMDB movies.
+(moods, taste profile, exclusions) -> AI titles -> TMDB movies.
 
 1. Build the user's exclusion set (previously recommended, viewed, liked,
    disliked, saved, plus ids the client says it has already shown).
@@ -15,7 +15,6 @@ import random
 import re
 
 from api.services import ServiceError, credentials, llm, taste, tmdb
-from api.services.weather import describe
 
 log = logging.getLogger(__name__)
 
@@ -40,11 +39,6 @@ MOOD_GENRES = {
     "stressed": (35, 16), "angry": (28, 80), "surprised": (9648, 53),
     "tired": (16, 10751), "relaxed": (35, 10749), "bored": (28, 12),
     "lonely": (10749, 18), "calm": (99, 18), "reflective": (18, 36),
-}
-WEATHER_GENRES = {
-    "clear": (12, 35), "clouds": (18, 9648), "rain": (10749, 18),
-    "drizzle": (10749, 18), "thunderstorm": (53, 27), "snow": (10751, 14),
-    "mist": (9648, 53), "fog": (9648, 53), "haze": (9648, 18),
 }
 DEFAULT_GENRES = (18, 35, 12)
 
@@ -77,15 +71,12 @@ def parse_moods(value):
     return moods
 
 
-def fallback_genres(moods, weather, profile=None):
+def fallback_genres(moods, profile=None):
     """Pick up to three TMDB genre ids for the fallback query, blending the
-    mood/weather vibe with the user's favourite genres."""
+    mood vibe with the user's favourite genres."""
     genres = []
     for mood in moods:
         genres.extend(MOOD_GENRES.get(mood.lower(), ()))
-    if weather:
-        genres.extend(WEATHER_GENRES.get(
-            (weather.get("condition") or "").lower(), ()))
     disliked = set(taste.disliked_genre_ids(profile))
     liked = [g for g in taste.liked_genre_ids(profile) if g not in disliked]
     vibe = [g for g in dict.fromkeys(genres) if g not in disliked]
@@ -145,8 +136,8 @@ class _Picker:
                                movie.get("year"))
 
 
-def recommend(moods, weather, config, user_id=None, seen_ids=(),
-              rng=random, keys=None):
+def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
+              keys=None):
     """Return {"movies", "titles", "source", "personalized"}.
 
     ``source`` is "ai" when the LLM produced the list (possibly topped up
@@ -162,7 +153,6 @@ def recommend(moods, weather, config, user_id=None, seen_ids=(),
     exclusion = taste.build_exclusion(user_id, seen_ids)
     excluded_count = len(exclusion)
     picker = _Picker(exclusion, TARGET_RESULTS)
-    weather_desc = describe(weather)
     taste_text = taste.summarize(profile)
     ai_titles = []
 
@@ -170,7 +160,7 @@ def recommend(moods, weather, config, user_id=None, seen_ids=(),
         need = picker.target - len(picker.movies)
         try:
             items = llm.suggest_titles(
-                moods, weather_desc, keys["groq"],
+                moods, keys["groq"],
                 config.get("GROQ_MODEL"), config.get("LLM_TIMEOUT", 20),
                 taste=taste_text,
                 exclude=exclusion.for_prompt() + picker.rejected[-20:],
@@ -187,7 +177,7 @@ def recommend(moods, weather, config, user_id=None, seen_ids=(),
 
     ai_count = len(picker.movies)
     if not picker.full:
-        genres = fallback_genres(moods, weather, profile)
+        genres = fallback_genres(moods, profile)
         without = taste.disliked_genre_ids(profile)
         for page in rng.sample(range(1, 6), 3):
             if picker.full:

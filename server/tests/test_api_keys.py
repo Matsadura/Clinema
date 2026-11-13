@@ -13,22 +13,18 @@ from api.services import credentials, llm
 from models import storage
 from models.api_key import UserApiKey
 from models.interaction import Interaction
-from tests.conftest import (TMDB_SEARCH, WEATHER_URL, register_and_login,
-                            tmdb_movie, weather_payload)
+from tests.conftest import TMDB_SEARCH, register_and_login, tmdb_movie
 
 GROQ_MODELS = "https://api.groq.com/openai/v1/models"
 TMDB_CONFIG = "https://api.themoviedb.org/3/configuration"
 USER_GROQ = "gsk_user_" + "u" * 30
 USER_TMDB = "tmdbuserkey" + "1" * 21
-USER_WEATHER = "owuserkey" + "2" * 23
-SERVER = {"groq": "test-groq", "tmdb": "test-tmdb",
-          "openweather": "test-weather"}
+SERVER = {"groq": "test-groq", "tmdb": "test-tmdb"}
 
 
 def save(client, uid, headers, provider, key, mocked=None, status=200):
     if mocked is not None:
-        url = {"groq": GROQ_MODELS, "tmdb": TMDB_CONFIG,
-               "openweather": WEATHER_URL}[provider]
+        url = {"groq": GROQ_MODELS, "tmdb": TMDB_CONFIG}[provider]
         mocked.get(url, status=status, json={})
     return client.put(f"/api/{uid}/api-keys/{provider}", headers=headers,
                       json={"key": key})
@@ -67,7 +63,7 @@ def test_invalid_encryption_key_fails_fast():
 
 def test_redact_removes_keys_from_messages():
     text = ("Max retries exceeded with url: /3/search/movie?api_key=SECRET1"
-            "&query=Heat and /weather?lat=1&appid=SECRET2")
+            "&query=Heat and /other?lat=1&appid=SECRET2")
     cleaned = credentials.redact(text)
     assert "SECRET1" not in cleaned and "SECRET2" not in cleaned
     assert "api_key=***" in cleaned and "appid=***" in cleaned
@@ -77,7 +73,7 @@ def test_redact_removes_keys_from_messages():
 def test_list_shows_server_fallback_by_default(client, user):
     uid, headers = user
     keys = client.get(f"/api/{uid}/api-keys", headers=headers).get_json()
-    assert [k["provider"] for k in keys] == ["groq", "tmdb", "openweather"]
+    assert [k["provider"] for k in keys] == ["groq", "tmdb"]
     assert all(not k["configured"] and k["fallback_available"]
                for k in keys)
 
@@ -105,14 +101,6 @@ def test_rejected_key_is_not_saved(client, user, mocked):
     assert res.status_code == 400
     assert "rejected" in res.get_json()["error"]
     assert storage.session.query(UserApiKey).count() == 0
-
-
-def test_openweather_rejection_mentions_activation_delay(client, user,
-                                                         mocked):
-    uid, headers = user
-    res = save(client, uid, headers, "openweather", USER_WEATHER, mocked,
-               status=401)
-    assert "2 hours" in res.get_json()["error"]
 
 
 def test_unreachable_provider_returns_502(client, user, mocked):
@@ -269,23 +257,6 @@ def test_failing_user_key_does_not_disable_ai_for_others(
     assert fake.used.count(SERVER["groq"]) == 2
 
 
-def test_weather_falls_back_from_rejected_user_key(client, user, mocked):
-    uid, headers = user
-    save(client, uid, headers, "openweather", USER_WEATHER, mocked)
-    mocked.get(WEATHER_URL, status=401, json={},
-               match=[responses.matchers.query_param_matcher(
-                   {"appid": USER_WEATHER}, strict_match=False)])
-    mocked.get(WEATHER_URL, json=weather_payload(),
-               match=[responses.matchers.query_param_matcher(
-                   {"appid": SERVER["openweather"]}, strict_match=False)])
-    res = client.get("/api/weather?lat=48.8&lon=2.3", headers=headers)
-    assert res.status_code == 200 and res.get_json()["city"] == "Paris"
-    entry = next(k for k in client.get(f"/api/{uid}/api-keys",
-                                       headers=headers).get_json()
-                 if k["provider"] == "openweather")
-    assert entry["status"] == "invalid"
-
-
 def test_tmdb_falls_back_from_rejected_user_key(client, user, mocked,
                                                 fake_llm):
     uid, headers = user
@@ -326,12 +297,40 @@ def test_undecryptable_key_falls_back_to_server(client, user, mocked,
     assert data["key_sources"]["groq"] == "server"
 
 
-def test_keys_never_reach_logs(client, user, mocked, caplog):
+def test_keys_never_reach_logs(client, user, mocked, fake_llm, caplog):
     uid, headers = user
-    save(client, uid, headers, "openweather", USER_WEATHER, mocked)
-    mocked.get(WEATHER_URL, body=requests.ConnectionError(
-        f"Max retries exceeded with url: /weather?appid={USER_WEATHER}"))
+    save(client, uid, headers, "tmdb", USER_TMDB, mocked)
+    mocked.get(TMDB_SEARCH, body=requests.ConnectionError(
+        f"Max retries exceeded with url: /3/search/movie?api_key={USER_TMDB}"
+        "&query=Up"))
+    fake_llm.content = json.dumps(["Up"])
     with caplog.at_level(logging.DEBUG):
-        client.get("/api/weather?lat=10&lon=10", headers=headers)
-    assert USER_WEATHER not in caplog.text
-    assert SERVER["openweather"] not in caplog.text
+        client.post("/api/suggestions", headers=headers,
+                    json={"moods": ["Calm"]})
+    assert "api_key=***" in caplog.text
+    assert USER_TMDB not in caplog.text
+    assert SERVER["tmdb"] not in caplog.text
+
+
+def test_unsupported_provider_and_legacy_openweather_rows(client, user,
+                                                          mocked, films,
+                                                          monkeypatch):
+    """OpenWeather keys are no longer accepted, and any leftover row is
+    ignored rather than breaking key resolution."""
+    uid, headers = user
+    assert client.put(f"/api/{uid}/api-keys/openweather", headers=headers,
+                      json={"key": "o" * 32}).status_code == 404
+    storage.new(UserApiKey(user_id=uid, provider="openweather",
+                           secret=credentials.encrypt(
+                               "o" * 32, client.application.config),
+                           last4="oooo", status="valid"))
+    storage.save()
+    fake = KeyedLLM()
+    install(monkeypatch, fake)
+    res = client.post("/api/suggestions", headers=headers,
+                      json={"moods": ["Calm"]})
+    assert res.status_code == 200
+    assert set(res.get_json()["key_sources"]) == {"groq", "tmdb"}
+    providers = [k["provider"] for k in client.get(
+        f"/api/{uid}/api-keys", headers=headers).get_json()]
+    assert providers == ["groq", "tmdb"]

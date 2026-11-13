@@ -42,22 +42,26 @@ def test_parse_titles_caps_results():
 
 
 def test_build_user_prompt_includes_inputs():
-    prompt = llm.build_user_prompt(["Calm", "Curious"], "light rain, 9°C")
+    prompt = llm.build_user_prompt(["Calm", "Curious"],
+                                   taste="Leans towards — genres: Drama.",
+                                   exclude=["Heat (1995)"])
+    assert "Leans towards" in prompt and "Heat (1995)" in prompt
+    assert "weather" not in prompt.lower()
+    assert "weather" not in llm.SYSTEM_PROMPT.lower()
     assert "Calm, Curious" in prompt
-    assert "light rain, 9°C" in prompt
 
 
 def test_suggest_titles_requires_key():
     with pytest.raises(llm.LLMError):
-        llm.suggest_titles(["Calm"], "", "", "model")
+        llm.suggest_titles(["Calm"], "", "model")
 
 
 def test_suggest_titles_is_not_cached_and_uses_strict_schema(fake_llm):
     """Identical requests must reach the model every time (no stale
     repeats) and ask for the strict structured-output schema."""
     fake_llm.content = '{"movies": [{"title": "Paddington", "year": 2014}]}'
-    llm.suggest_titles(["Calm"], "sunny", "key", "model")
-    llm.suggest_titles(["Calm"], "sunny", "key", "model")
+    llm.suggest_titles(["Calm"], "key", "model")
+    llm.suggest_titles(["Calm"], "key", "model")
     assert len(fake_llm.calls) == 2
     fmt = fake_llm.calls[0]["response_format"]
     assert fmt["type"] == "json_schema"
@@ -71,9 +75,9 @@ def test_circuit_breaker_skips_llm_after_failure(monkeypatch):
     fake = FakeLLM(error=RuntimeError("boom"))
     monkeypatch.setattr(llm, "_get_client", lambda *a, **k: fake)
     with pytest.raises(llm.LLMError):
-        llm.suggest_titles(["Sad"], "", "key", "model")
+        llm.suggest_titles(["Sad"], "key", "model")
     with pytest.raises(llm.LLMError, match="temporarily disabled"):
-        llm.suggest_titles(["Happy"], "", "key", "model")
+        llm.suggest_titles(["Happy"], "key", "model")
     assert len(fake.calls) == 1
 
 
@@ -96,12 +100,12 @@ def test_retired_model_falls_through_to_next(monkeypatch):
 
     fake = Client(content='["Stalker"]')
     monkeypatch.setattr(llm, "_get_client", lambda *a, **k: fake)
-    titles = llm.suggest_titles(["Calm"], "", "key", "retired, working")
+    titles = llm.suggest_titles(["Calm"], "key", "retired, working")
     assert titles == [{"title": "Stalker", "year": None}]
     assert [c["model"] for c in fake.calls] == ["retired", "working"]
 
     # The retired model is remembered and not retried
-    llm.suggest_titles(["Sad"], "", "key", "retired, working")
+    llm.suggest_titles(["Sad"], "key", "retired, working")
     assert [c["model"] for c in fake.calls][-1] == "working"
     assert [c["model"] for c in fake.calls].count("retired") == 1
 
@@ -110,13 +114,13 @@ def test_all_models_unavailable_raises(monkeypatch):
     fake = FakeLLM(error=ModelNotFound("model_not_found"))
     monkeypatch.setattr(llm, "_get_client", lambda *a, **k: fake)
     with pytest.raises(llm.LLMError):
-        llm.suggest_titles(["Calm"], "", "key", "a,b")
+        llm.suggest_titles(["Calm"], "key", "a,b")
     assert len(fake.calls) == 2
 
 
 def test_reasoning_models_get_low_effort(fake_llm):
     fake_llm.content = '["Up"]'
-    llm.suggest_titles(["Calm"], "", "key", "openai/gpt-oss-120b")
+    llm.suggest_titles(["Calm"], "key", "openai/gpt-oss-120b")
     assert fake_llm.calls[0]["reasoning_effort"] == "low"
-    llm.suggest_titles(["Sad"], "", "key", "qwen/qwen3.8-27b")
+    llm.suggest_titles(["Sad"], "key", "qwen/qwen3.8-27b")
     assert "reasoning_effort" not in fake_llm.calls[1]

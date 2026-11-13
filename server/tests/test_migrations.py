@@ -76,3 +76,22 @@ def test_adopts_database_created_before_migrations(engine, tmp_path):
             'SELECT movie_id, "like", dislike FROM user_movies').fetchall()
     assert rows == [(550, 1, None)]
     assert "interactions" in tables(engine)
+
+
+def test_0004_removes_only_openweather_keys(engine):
+    migrate(engine, command.upgrade, "0003")
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "INSERT INTO users (id, email, password, first_name, last_name) "
+            "VALUES ('u1', 'a@b.co', 'x', 'A', 'B')")
+        for provider in ("groq", "tmdb", "openweather"):
+            conn.exec_driver_sql(
+                "INSERT INTO user_api_keys (id, user_id, provider, secret, "
+                f"last4, status) VALUES ('{provider}', 'u1', '{provider}', "
+                "'ciphertext', 'abcd', 'valid')")
+    migrate(engine, command.upgrade, "head")
+    with engine.connect() as conn:
+        providers = {r[0] for r in conn.exec_driver_sql(
+            "SELECT provider FROM user_api_keys")}
+    assert providers == {"groq", "tmdb"}
+    migrate(engine, command.downgrade, "0003")  # data-only: no-op

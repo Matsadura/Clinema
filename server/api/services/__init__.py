@@ -1,4 +1,4 @@
-"""External service integrations (weather, LLM, TMDB) and the
+"""External service integrations (LLM, TMDB) and the
 recommendation pipeline that combines them."""
 
 

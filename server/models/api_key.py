@@ -13,7 +13,7 @@ class UserApiKey(BaseModel, Base):
     user_id = Column(String(128),
                      ForeignKey('users.id', ondelete='CASCADE'),
                      nullable=False)
-    provider = Column(String(20), nullable=False)  # groq|tmdb|openweather
+    provider = Column(String(20), nullable=False)  # groq|tmdb
     secret = Column(Text, nullable=False)
     last4 = Column(String(8), nullable=False)
     # 'valid' when the provider accepted it; 'invalid' after a rejection

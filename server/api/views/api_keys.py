@@ -7,7 +7,7 @@ Routes:
     - PUT    /<user_id>/api-keys/<provider>    Validate + save {"key": "..."}
     - DELETE /<user_id>/api-keys/<provider>    Remove (fall back to server)
 
-Providers: groq, tmdb, openweather. Keys are verified with the provider
+Providers: groq, tmdb. Keys are verified with the provider
 before saving, stored encrypted, and never returned (only the last four
 characters).
 """

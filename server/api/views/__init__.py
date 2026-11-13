@@ -10,5 +10,4 @@ from api.views.movies import *  # noqa: E402,F401,F403
 from api.views.movies_suggestions import *  # noqa: E402,F401,F403
 from api.views.users import *  # noqa: E402,F401,F403
 from api.views.user_movies import *  # noqa: E402,F401,F403
-from api.views.weather import *  # noqa: E402,F401,F403
 from api.views.api_keys import *  # noqa: E402,F401,F403
