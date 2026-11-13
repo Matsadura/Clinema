@@ -16,6 +16,8 @@ EVENT_WEIGHTS = {
     'undislike': 2.0,     # cancels a previous dislike
     'save': 1.0,
     'unsave': -1.0,
+    'seen': 0.5,          # watched it: mild interest, and never re-recommend
+    'unseen': -0.5,
     'recommended': 0.0,   # shown to the user (used for de-duplication)
 }
 

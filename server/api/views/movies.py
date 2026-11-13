@@ -3,12 +3,15 @@
 
 Routes:
     - GET  /movies             List cached movies (?limit=&offset=)
+    - GET  /movies/search      Title search on TMDB (?q=)
+    - GET  /movies/trending    This week's trending films
     - POST /movies             Cache a movie (auth required)
     - GET  /movies/<tmdb_id>   Get one movie by TMDB id
 """
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required
 
+from api.extensions import limiter
 from api.services import tmdb
 from api.views import app_views
 from api.views.helpers import error, json_body, request_keys, upsert_movies
@@ -52,6 +55,33 @@ def post_movies():
     storage.new(movie)
     storage.save()
     return jsonify(movie.to_dict()), 201
+
+
+@app_views.route('/movies/search', methods=['GET'])
+@limiter.limit("60 per minute")
+def search_movies():
+    """Free-text title search: ?q=<2..100 chars>. Up to 12 results."""
+    query = " ".join((request.args.get('q') or '').split())
+    if not 2 <= len(query) <= 100:
+        return error('Search needs 2 to 100 characters')
+    keys = request_keys()["tmdb"]
+    if not keys:
+        return error('Movie database is not configured', 503)
+    results = tmdb.search_many(query.lower(), keys)
+    upsert_movies(results)
+    return jsonify(results)
+
+
+@app_views.route('/movies/trending', methods=['GET'])
+@limiter.limit("60 per minute")
+def trending_movies():
+    """This week's trending films (cached for an hour)."""
+    keys = request_keys()["tmdb"]
+    if not keys:
+        return error('Movie database is not configured', 503)
+    results = tmdb.trending(keys)
+    upsert_movies(results)
+    return jsonify(results)
 
 
 @app_views.route('/movies/<int:tmdb_id>', methods=['GET'])
