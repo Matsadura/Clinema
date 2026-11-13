@@ -52,8 +52,9 @@ def alembic_config(connection=None):
 
 def run_migrations(engine, revision="head"):
     """Upgrade the database schema to ``revision``."""
-    from alembic import command
+    # Set before importing alembic.command, which logs plugin setup
     logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
+    from alembic import command
     with engine.begin() as connection:
         command.upgrade(alembic_config(connection), revision)
 

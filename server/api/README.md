@@ -46,8 +46,11 @@ Errors: `400` for missing or invalid coordinates, `503` if the upstream service 
 
 ### `POST /suggestions` (limit: 20 per minute and 200 per day)
 ```json
-{ "moods": ["Calm", "Curious"], "latitude": 48.85, "longitude": 2.35 }
+{ "moods": ["Calm", "Curious"], "latitude": 48.85, "longitude": 2.35, "seen_ids": [550, 13] }
 ```
+Optionally authenticated. With a token, results are personalised from the user's taste profile, everything
+the user has been shown, viewed, liked, disliked or saved is excluded, and the returned films are recorded
+so they won't be repeated. `seen_ids` (up to 300 TMDB ids) lets anonymous clients avoid repeats too.
 At least one of `moods` or the coordinates is required. Moods are 1–32 letters (spaces, `-` and `'` allowed),
 with at most 6 of them.
 
@@ -55,9 +58,14 @@ with at most 6 of them.
 {
   "movies": [{ "tmdb_id": 157336, "title": "Interstellar", "year": 2014, "rating": 8.5,
                "poster": "https://image.tmdb.org/t/p/w500/...", "backdrop": "...",
-               "description": "...", "language": "en", "popularity": 120.3, "adult": false }],
+               "description": "...", "language": "en", "popularity": 120.3, "adult": false,
+               "genres": ["Science Fiction", "Drama"], "director": "Christopher Nolan",
+               "why": "personalised reason", "fit": "why it suits the mood and weather",
+               "tone": "awe-struck, melancholic", "source": "ai" }],
   "suggestions": ["Interstellar", "..."],
   "source": "ai",
+  "personalized": true,
+  "excluded": 24,
   "moods": ["Calm", "Curious"],
   "weather": { "...": "as /weather, or null" },
   "warning": null
@@ -83,7 +91,10 @@ Legacy aliases with the same response: `POST /movies_by_mood` (`{mood}`), `POST 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/<user_id>/library` | All entries: `[{movie_id, like, save, movie: {...}}]` |
-| PUT | `/<user_id>/library/<tmdb_id>` | Upsert `{"like": bool?, "save": bool?}`. The entry is removed when both are false. |
+| PUT | `/<user_id>/library/<tmdb_id>` | Upsert `{"like"?, "save"?, "dislike"?}` (booleans). Like and dislike are mutually exclusive. The entry is removed when all are false. Each change is logged and updates the taste profile. |
+| POST | `/<user_id>/interactions` | Log a browsing signal `{"movie_id": 550, "event": "view"}` (`201`) |
+| GET | `/<user_id>/taste` | `{profile, summary, personalized}`: the learned profile and the text injected into prompts |
+| GET | `/<user_id>/disliked` | Disliked entries, with `movie` details |
 | GET | `/<user_id>/liked`, `/<user_id>/save` | Filtered entries, with `movie` details |
 | GET | `/<user_id>/user_movies` | Raw entries |
 | POST | `/<user_id>/liked`, `/<user_id>/save` | Legacy create: `{movie_id, like?, save?}`. `409` if the entry exists. |

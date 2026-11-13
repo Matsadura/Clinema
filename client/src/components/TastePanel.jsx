@@ -71,7 +71,10 @@ export default function TastePanel({ userId }) {
       )}
       {state.status === 'ready' && state.data.personalized && (
         <div className="mt-5 space-y-5">
-          {Object.entries(state.data.profile.likes || {}).map(([kind, entries]) => (
+          {Object.keys(LABELS)
+            .filter((kind) => state.data.profile.likes?.[kind]?.length)
+            .map((kind) => [kind, state.data.profile.likes[kind]])
+            .map(([kind, entries]) => (
             <div key={kind}>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">{LABELS[kind] || kind}</h3>
               <Chips entries={entries} />
