@@ -15,7 +15,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" />
-  <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_Llama_3.3-F55036" />
+  <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_GPT--OSS-F55036" />
 </p>
 
 ---
@@ -36,7 +36,7 @@ stack ships as small, non-root Docker images with health checks.
 - 🎭 **Mood matching:** pick up to six moods, from *Joyful* to *Reflective*.
 - 🌦️ **Weather-aware:** share your location to factor in live OpenWeather conditions. Denied or unavailable
   location is handled gracefully.
-- 🤖 **AI curation with graceful degradation:** a Llama 3.3 model on Groq suggests titles. If the model is slow,
+- 🤖 **AI curation with graceful degradation:** an open-weight model on Groq (GPT-OSS 120B by default) suggests titles. If the model is slow,
   down or misconfigured, Clinema falls back to TMDB genre discovery, so users always get results.
 - 🎬 **Rich details:** posters, ratings, synopses and a details modal for every film.
 - ❤️ **Library:** like films and keep a watchlist, with optimistic updates.
@@ -153,7 +153,7 @@ All configuration lives in a single root `.env` (see [`.env.example`](.env.examp
 | `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | ✅ (Docker) | Database credentials |
 | `MYSQL_DATABASE`, `MYSQL_USER` | | Default to `clinema` |
 | `APP_ENV` | | `production` (default in compose) or `development` |
-| `GROQ_MODEL` | | Defaults to `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | | Comma-separated models in order of preference (default `openai/gpt-oss-120b,openai/gpt-oss-20b`). Retired models are skipped automatically. |
 | `LLM_TIMEOUT` | | Seconds before falling back (default `20`) |
 | `JWT_EXPIRES_HOURS` | | Token lifetime (default `24`) |
 | `CORS_ORIGINS` | | Comma-separated origins. Only needed if the SPA is hosted on another domain. |

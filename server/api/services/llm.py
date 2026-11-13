@@ -102,31 +102,71 @@ def parse_titles(content):
     return []
 
 
+DEFAULT_MODELS = "openai/gpt-oss-120b,openai/gpt-oss-20b"
+# Models Groq reported as missing/retired; skipped for the process lifetime.
+_unavailable_models = set()
+
+
+def parse_models(value):
+    """Split a comma-separated GROQ_MODEL value into an ordered list."""
+    models = [m.strip() for m in (value or DEFAULT_MODELS).split(",")]
+    return [m for m in models if m]
+
+
+def _is_model_missing(exc):
+    """True if Groq says the requested model doesn't exist/was retired."""
+    status = getattr(exc, "status_code", None)
+    text = str(exc).lower()
+    return status == 404 or "model_not_found" in text or \
+        "decommissioned" in text
+
+
+def _request_kwargs(model):
+    kwargs = {}
+    if model.startswith("openai/gpt-oss"):
+        # Reasoning models: keep reasoning short so replies stay fast
+        kwargs["reasoning_effort"] = "low"
+    return kwargs
+
+
 @TTLMemo(maxsize=512, ttl=900)
-def _suggest(moods, weather_desc, api_key, model, timeout):
+def _suggest(moods, weather_desc, api_key, models, timeout):
     client = _get_client(api_key, timeout)
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",
-                 "content": build_user_prompt(list(moods), weather_desc)},
-            ],
-            temperature=0.9,
-            max_tokens=800,
-            response_format={"type": "json_object"},
-        )
-    except Exception as exc:  # noqa: BLE001 - SDK raises many types
-        log.warning("LLM request failed: %s", exc)
-        return None
-    content = completion.choices[0].message.content if completion.choices \
-        else ""
-    titles = parse_titles(content)
-    if not titles:
-        log.warning("LLM returned no parseable titles")
-        return None
-    return titles
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",
+         "content": build_user_prompt(list(moods), weather_desc)},
+    ]
+    for model in models:
+        if model in _unavailable_models:
+            continue
+        try:
+            completion = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.9,
+                # Generous budget: reasoning tokens count towards it
+                max_tokens=2000,
+                response_format={"type": "json_object"},
+                **_request_kwargs(model),
+            )
+        except Exception as exc:  # noqa: BLE001 - SDK raises many types
+            if _is_model_missing(exc):
+                _unavailable_models.add(model)
+                log.error("Groq model %r is unavailable; trying the next "
+                          "one. Update GROQ_MODEL.", model)
+                continue
+            log.warning("LLM request failed: %s", exc)
+            return None
+        content = completion.choices[0].message.content \
+            if completion.choices else ""
+        titles = parse_titles(content)
+        if not titles:
+            log.warning("LLM (%s) returned no parseable titles", model)
+            return None
+        return titles
+    log.error("No usable Groq model among %s", ", ".join(models))
+    return None
 
 
 def suggest_titles(moods, weather_desc, api_key, model, timeout=20):
@@ -139,8 +179,8 @@ def suggest_titles(moods, weather_desc, api_key, model, timeout=20):
         raise LLMError("LLM not configured")
     if time.monotonic() < _down_until:
         raise LLMError("LLM temporarily disabled after a recent failure")
-    titles = _suggest(tuple(sorted(moods)), weather_desc, api_key, model,
-                      timeout)
+    titles = _suggest(tuple(sorted(moods)), weather_desc, api_key,
+                      tuple(parse_models(model)), timeout)
     if not titles:
         _down_until = time.monotonic() + COOLDOWN_SECONDS
         raise LLMError("No suggestions from LLM")
@@ -151,3 +191,4 @@ def reset_circuit():
     """Re-enable the LLM immediately (used by tests)."""
     global _down_until
     _down_until = 0.0
+    _unavailable_models.clear()

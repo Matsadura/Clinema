@@ -56,7 +56,7 @@ def build_config(overrides=None):
         "DATABASE_URL": None,  # None -> derived from env by DBStorage
         "OPENWEATHER_API_KEY": os.getenv("OPENWEATHER_API_KEY", ""),
         "GROQ_API_KEY": os.getenv("GROQ_API_KEY", ""),
-        "GROQ_MODEL": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        "GROQ_MODEL": os.getenv("GROQ_MODEL", ""),  # "" -> llm.DEFAULT_MODELS
         "LLM_TIMEOUT": _int("LLM_TIMEOUT", 20),
         "TMDB_API_KEY": os.getenv("TMDB_API_KEY", ""),
     }
