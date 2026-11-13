@@ -9,6 +9,7 @@ import DiscoverPage from './pages/DiscoverPage.jsx';
 
 // Secondary pages are code-split so the discovery screen loads fast.
 const LibraryPage = lazy(() => import('./pages/LibraryPage.jsx'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
 const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="about" element={<AboutPage />} />
         <Route path="auth" element={<AuthPage />} />
         <Route path="library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
+        <Route path="history" element={<RequireAuth><HistoryPage /></RequireAuth>} />
         <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
 
         {/* Legacy URLs */}

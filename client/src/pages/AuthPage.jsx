@@ -72,7 +72,7 @@ export default function AuthPage() {
         : 'Pick up where your taste left off.';
 
   return (
-    <div className="mx-auto w-full max-w-sm px-4 py-16 sm:py-24">
+    <div className="mx-auto w-full max-w-sm px-4 py-10 sm:py-16">
       <h1 className="font-display text-display text-ink">{mode === 'signup' ? 'Create an account' : 'Sign in'}</h1>
       <p className="mt-3 text-sm text-muted">{intro}</p>
 

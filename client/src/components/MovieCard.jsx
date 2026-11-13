@@ -19,6 +19,7 @@ export function Rating({ value, className = '' }) {
     <span className={`num text-accent ${className}`}>
       <span aria-hidden="true">★ </span>
       {value.toFixed(1)}
+      <span className="text-subtle" aria-hidden="true"> / 10</span>
       <span className="sr-only"> out of 10</span>
     </span>
   );
@@ -34,6 +35,7 @@ const ACTIONS = [
 function MovieCard({ movie, liked = false, saved = false, disliked = false, seen = false, onToggle, onOpen }) {
   const [imageFailed, setImageFailed] = useState(false);
   const { title, poster, year, rating } = movie;
+  const genre = Array.isArray(movie.genres) ? movie.genres[0] : null;
   const state = { like: liked, save: saved, dislike: disliked, seen };
 
   return (
@@ -101,10 +103,12 @@ function MovieCard({ movie, liked = false, saved = false, disliked = false, seen
       </div>
 
       <h3 className="mt-3 text-sm font-medium text-ink line-clamp-1">{title}</h3>
-      <p className="num mt-0.5 flex gap-2 text-xs text-muted">
+      <p className="num mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted">
         {year && <span>{year}</span>}
-        <Rating value={rating} />
+        {year && genre && <span aria-hidden="true">·</span>}
+        {genre && <span className="truncate">{genre}</span>}
       </p>
+      <Rating value={rating} className="mt-1 block text-xs" />
     </article>
   );
 }

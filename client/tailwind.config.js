@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin';
+
 /** @type {import('tailwindcss').Config} */
 
 // Colours are CSS variables (see src/index.css) so the palette lives in one
@@ -65,5 +67,8 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `light:` styles apply only in the light theme
+    plugin(({ addVariant }) => addVariant('light', ':root[data-theme="light"] &')),
+  ],
 }

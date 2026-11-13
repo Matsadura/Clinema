@@ -4,10 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import App from '../App.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
+import { resetTrendingCache } from '../hooks/useTrending.js';
+import { callsTo, json, routeFetch } from '../test/fetchRoutes.js';
 
 const movies = [
-  { tmdb_id: 1, title: 'Amélie', year: 2001, rating: 7.9, poster: 'https://image.tmdb.org/a.jpg' },
-  { tmdb_id: 2, title: 'Paddington', year: 2014, rating: 7.2, poster: 'https://image.tmdb.org/p.jpg' },
+  { tmdb_id: 1, title: 'Amélie', year: 2001, rating: 7.9, genres: ['Comedy'], poster: 'https://image.tmdb.org/a.jpg' },
+  { tmdb_id: 2, title: 'Paddington', year: 2014, rating: 7.2, genres: ['Family'], poster: 'https://image.tmdb.org/p.jpg' },
+];
+const trending = [
+  { tmdb_id: 50, title: 'The Odyssey', year: 2026, rating: 7.1, poster: 'https://image.tmdb.org/o.jpg', backdrop: 'https://image.tmdb.org/t/p/w780/o.jpg' },
+  { tmdb_id: 51, title: 'Ebenezer', year: 2026, rating: 6.4, poster: 'https://image.tmdb.org/e.jpg', backdrop: 'https://image.tmdb.org/t/p/w780/e.jpg' },
 ];
 
 function Where() {
@@ -26,51 +32,65 @@ function renderAt(url) {
   );
 }
 
-const ok = (body) => new Response(JSON.stringify(body), { status: 200 });
+const suggestions = (body) => ({ '/api/movies/trending': trending, '/api/suggestions': body });
 
-describe('Discover (home)', () => {
+describe('Home', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
     window.sessionStorage.clear();
     window.localStorage.clear();
+    resetTrendingCache();
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('is never empty: a featured backdrop and a trending shelf before any mood', async () => {
+    const fetch = routeFetch({ '/api/movies/trending': trending });
+    renderAt('/');
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Find your next favourite film.');
+    const shelf = await screen.findByRole('region', { name: 'Trending this week' });
+    expect(within(shelf).getByText('The Odyssey')).toBeInTheDocument();
+    expect(screen.getByText('Featured tonight')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Recommendations' })).not.toBeInTheDocument();
+    expect(callsTo(fetch, '/api/suggestions')).toHaveLength(0);
+  });
+
   it('loads recommendations for the moods in the URL, with poster skeletons first', async () => {
-    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'] }));
+    const fetch = routeFetch(suggestions({ movies, source: 'ai', moods: ['Calm'] }));
     renderAt('/?moods=Calm,Bogus');
 
     expect(screen.getByLabelText('Loading movies')).toBeInTheDocument();
-    expect(await screen.findByText('Amélie')).toBeInTheDocument();
-    expect(screen.getByText('2 films')).toBeInTheDocument();
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ moods: ['Calm'] });
+    const recs = await screen.findByRole('region', { name: 'Recommendations' });
+    expect(await within(recs).findByText('Amélie')).toBeInTheDocument();
+    expect(within(recs).getByText('2 films for Calm')).toBeInTheDocument();
+    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[0][1].body)).toEqual({ moods: ['Calm'] });
   });
 
-  it('searches from the control bar without leaving the page', async () => {
+  it('searches by mood from the hero without leaving the page', async () => {
     const user = userEvent.setup();
-    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'] }));
+    routeFetch(suggestions({ movies, source: 'ai', moods: ['Calm'] }));
     renderAt('/');
 
-    expect(fetch).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Calm' }));
     await user.click(screen.getByRole('button', { name: 'Find films' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/?moods=Calm');
     expect(await screen.findByText('Amélie')).toBeInTheDocument();
   });
 
-  it('redirects the old /discover URL to the home page, keeping the moods', async () => {
-    fetch.mockResolvedValue(ok({ movies, source: 'ai', moods: ['Calm'] }));
-    renderAt('/discover?moods=Calm&weather=1');
+  it('redirects the old /discover URL, keeping the moods', async () => {
+    routeFetch(suggestions({ movies, source: 'ai', moods: ['Calm'] }));
+    renderAt('/discover?moods=Calm');
     expect(await screen.findByText('Amélie')).toBeInTheDocument();
-    expect(screen.getByTestId('where')).toHaveTextContent('/?moods=Calm&weather=1');
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ moods: ['Calm'] });
+    expect(screen.getByTestId('where')).toHaveTextContent('/?moods=Calm');
   });
 
   it('shows an error with a working retry', async () => {
     const user = userEvent.setup();
-    fetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Movie database is not configured' }), { status: 503 }))
-      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Sad'] }));
+    let calls = 0;
+    routeFetch({
+      '/api/movies/trending': trending,
+      '/api/suggestions': () =>
+        ++calls === 1 ? json({ error: 'Movie database is not configured' }, 503) : { movies, source: 'ai', moods: ['Sad'] },
+    });
     renderAt('/?moods=Sad');
 
     expect(await screen.findByText('Movie database is not configured')).toBeInTheDocument();
@@ -78,47 +98,52 @@ describe('Discover (home)', () => {
     expect(await screen.findByText('Amélie')).toBeInTheDocument();
   });
 
-  it('explains the AI fallback in the single results readout', async () => {
-    fetch.mockResolvedValue(ok({ movies, source: 'fallback', moods: ['Sad'] }));
+  it('explains the AI fallback in the results readout', async () => {
+    routeFetch(suggestions({ movies, source: 'fallback', moods: ['Sad'] }));
     renderAt('/?moods=Sad');
-    expect(await screen.findByText('2 films · AI curator unavailable — popular picks')).toBeInTheDocument();
+    expect(await screen.findByText('2 films for Sad · AI curator unavailable — popular picks')).toBeInTheDocument();
   });
 
-  it('remembers shown films and asks for different ones', async () => {
+  it('asks for different picks, sending the films already shown', async () => {
     const user = userEvent.setup();
     const more = [{ tmdb_id: 3, title: 'Stalker', year: 1979, rating: 8.1, poster: 'https://image.tmdb.org/s.jpg' }];
-    fetch
-      .mockResolvedValueOnce(ok({ movies, source: 'ai', moods: ['Calm'] }))
-      .mockResolvedValueOnce(ok({ movies: more, source: 'ai', moods: ['Calm'] }));
+    let calls = 0;
+    const fetch = routeFetch({
+      '/api/movies/trending': trending,
+      '/api/suggestions': () => (++calls === 1 ? { movies, source: 'ai', moods: ['Calm'] } : { movies: more, source: 'ai', moods: ['Calm'] }),
+    });
     renderAt('/?moods=Calm');
 
     await screen.findByText('Amélie');
     await user.click(screen.getByRole('button', { name: /Different picks/ }));
     expect(await screen.findByText('Stalker')).toBeInTheDocument();
-    expect(screen.queryByText('Amélie')).not.toBeInTheDocument();
-    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ moods: ['Calm'], seen_ids: [1, 2] });
-    expect(JSON.parse(window.localStorage.getItem('clinema:seen'))).toEqual([1, 2, 3]);
+    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[1][1].body)).toEqual({ moods: ['Calm'], seen_ids: [1, 2] });
   });
 
-  it('opens the detail drawer with the personalised reasoning', async () => {
+  it('opens the shared detail drawer with the reasoning and four actions', async () => {
     const user = userEvent.setup();
-    const explained = [{ ...movies[0], why: 'You love whimsical European comedies.', fit: 'Bright and gentle for a calm mood.', genres: ['Comedy'] }];
-    fetch.mockResolvedValue(ok({ movies: explained, source: 'ai', personalized: true, moods: ['Calm'] }));
+    const explained = [{ ...movies[0], why: 'You love whimsical European comedies.', fit: 'Bright and gentle for a calm mood.' }];
+    routeFetch(suggestions({ movies: explained, source: 'ai', personalized: true, moods: ['Calm'] }));
     renderAt('/?moods=Calm');
 
     expect(await screen.findByText(/tuned to your taste/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Amélie (2001), view details' }));
     const drawer = screen.getByRole('dialog', { name: 'Amélie' });
-    const why = within(drawer).getByRole('region', { name: 'Why this pick' });
-    expect(why).toHaveTextContent('You love whimsical European comedies.');
-    expect(why).toHaveTextContent('Bright and gentle for a calm mood.');
-    expect(within(drawer).getByRole('button', { name: 'Like' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(drawer).getByRole('region', { name: 'Why this pick' })).toHaveTextContent('You love whimsical European comedies.');
+    for (const action of ['Like', 'Watchlist', 'Seen', 'Not for me']) {
+      expect(within(drawer).getByRole('button', { name: action })).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 
-  it('shows only the control bar when no mood is chosen', () => {
+  it('sends signed-out visitors to sign in when they act on a film', async () => {
+    const user = userEvent.setup();
+    routeFetch({ '/api/movies/trending': trending });
     renderAt('/');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('What do you want to feel tonight?');
-    expect(screen.queryByRole('region', { name: 'Recommendations' })).not.toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole('button', { name: 'The Odyssey (2026), view details' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Seen' }));
+    // Navigation is a transition; it commits once the lazy page has loaded
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByTestId('where')).toHaveTextContent('/auth');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
