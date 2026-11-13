@@ -1,6 +1,31 @@
+# Secrets — only .env.example is tracked
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
 **/__pycache__/
-**/dist/
-**/.vscode/
-**/node_modules/
-**/npm-debug.log*
+*.py[cod]
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
 **/.flake8
+
+# Node / build
+**/node_modules/
+**/dist/
+**/coverage/
+**/npm-debug.log*
+
+# Editors / OS
+**/.vscode/
+.idea/
+.DS_Store
+
+# Local tooling output
+.playwright-mcp/

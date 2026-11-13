@@ -2,74 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #2b2c36;
-}
-
-.infinite-scroll:hover {
-  @apply animate-pause;
-}
-
-.animate-pause {
-  animation-play-state: paused;
-}
-
-.see-all-button:hover .see-all-icon {
-  transform: translateX(4px); /* Adjust arrow movement on hover */
-}
-
-.mood-button {
-  /* Existing styles from your code */
-  background-color: var(--mood-bg-color, transparent); /* Default transparent background */
-  color: var(--mood-text-color, inherit); /* Default text color */
-  padding-left: 24px; /* Adjust padding to accommodate icons (optional) */
-  position: relative; /* For icon positioning (optional) */
-}
-
-.mood-button.happy {
-  background-color: yellow;
-}
-
-.mood-button.sad {
-  background-color: blue;
-}
-
-.hide-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.hide-scroll{
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  body {
+    @apply bg-secondary-dark text-white;
+  }
+
+  ::selection {
+    @apply bg-primary/60 text-white;
+  }
+
+  input[type='search']::-webkit-search-cancel-button {
+    filter: invert(1);
+    opacity: 0.5;
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 1;
-    transform: translateY(0px);
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  to {
-    opacity: 0;
-    transform: translateY(-10px);
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
-
-.slide-down-animation {
-  animation: slideDown 1s ease-in-out forwards;
-}
-
-.slide-up-animation {
-  animation: slideUp 1s ease-in-out forwards;
-}
-
-

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Holds class Movie"""
-from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String, Boolean, Integer, Float
-from sqlalchemy.orm import relationship
+"""Holds class Movie (a local cache of TMDB metadata)."""
+from sqlalchemy import Boolean, Column, Float, Integer, String
+
+from models.base_model import Base, BaseModel
 
 
 class Movie(BaseModel, Base):
-    """Representation of a user """
+    """Representation of a movie"""
     __tablename__ = 'movies'
-    tmdb_id = Column(Integer, nullable=False)
+    tmdb_id = Column(Integer, nullable=False, unique=True, index=True)
     title = Column(String(128), nullable=False)
     description = Column(String(2024), nullable=True)
     poster = Column(String(512), nullable=True)
@@ -17,10 +17,6 @@ class Movie(BaseModel, Base):
     year = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
     language = Column(String(128), nullable=True)
-    # user_movies = relationship("User_Movie",
-    #                            back_populates="movie",
-    #                            cascade="all, delete-orphan")
 
-    def __init__(self, *args, **kwargs):
-        """Initializes user"""
-        super().__init__(*args, **kwargs)
+    FIELDS = ('tmdb_id', 'title', 'description', 'poster', 'adult',
+              'popularity', 'year', 'rating', 'language')

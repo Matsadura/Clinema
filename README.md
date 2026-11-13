@@ -1,76 +1,201 @@
-# Clinema
+<p align="center">
+  <img src="client/src/images/brand-logo-dark.svg" alt="Clinema" width="320" />
+</p>
 
+<p align="center">
+  <strong>The right movie for how you feel — and what it's like outside.</strong><br />
+  AI-powered film recommendations from your mood, your local weather, or both.
+</p>
 
-![image](https://github.com/Matsadura/Clinema/blob/main/client/src/images/brand-logo-dark.svg)
+<p align="center">
+  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white" />
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white" />
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
+  <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" />
+  <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_Llama_3.3-F55036" />
+</p>
+
+---
 
 ## Overview
 
-Clinema is a web application that suggests personalized movie recommendations based on the user's mood, the current weather, or a combination of both. By leveraging AI and real-time weather data, it provides a unique and tailored cinematic experience. Perfect for anyone seeking the right movie for any emotional state or weather condition. The API is developed using Flask, while the client is built with Vite and Tailwind CSS for a modern user interface. The application uses MySQL as the database to store all relevant data.
+Choosing a film is harder than watching one. **Clinema** asks how you want to feel, optionally looks up the
+weather where you are, and has an LLM curate a list of films that fit the moment. Every suggestion is matched
+against [TMDB](https://www.themoviedb.org/) for posters, ratings and synopses, and signed-in users can like
+films and build a watchlist.
+
+Clinema started as a hackathon project and has since been hardened for production: secrets live server-side,
+external APIs have timeouts, caching and fallbacks, the UI handles every loading and failure state, and the whole
+stack ships as small, non-root Docker images with health checks.
 
 ## Features
-- User authentication and authorization
-- Movie listing and details
-- Movie listing based on the user's current weather
-- Movie listing based on the user's selected mood(s)
-- Movie listing based on a combination of the user's selected moods and current weather
-- Like and save suggestions
-- Responsive design for mobile and desktop
 
-## Getting Started
-To get started with Clinema, clone the repository and follow the instructions in the respective service directories for setup and deployment.
+- 🎭 **Mood matching:** pick up to six moods, from *Joyful* to *Reflective*.
+- 🌦️ **Weather-aware:** share your location to factor in live OpenWeather conditions. Denied or unavailable
+  location is handled gracefully.
+- 🤖 **AI curation with graceful degradation:** a Llama 3.3 model on Groq suggests titles. If the model is slow,
+  down or misconfigured, Clinema falls back to TMDB genre discovery, so users always get results.
+- 🎬 **Rich details:** posters, ratings, synopses and a details modal for every film.
+- ❤️ **Library:** like films and keep a watchlist, with optimistic updates.
+- 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
+- 📱 **Responsive and accessible:** mobile-first layout, keyboard navigation, focus-managed dialogs,
+  reduced-motion support.
+- ⚡ **Fast:** route-level code splitting, server-side TTL caches, parallel TMDB lookups, gzip and immutable
+  asset caching through Nginx.
 
-## Tech Stack
-Clinema utilizes a modern tech stack to ensure efficient development and a seamless user experience. The key technologies include:
+## Architecture
 
-- **client**: A fast build tool and development server for modern web projects, used for the client-side application built with Vite.
-- **server**: A Python framework for building web applications, specifically the API developed using Flask.
-- **database**: A relational database management system used to store application data, specifically MySQL.
+```text
+┌───────────────┐      ┌─────────────────────────┐      ┌──────────────────────┐
+│   Browser     │      │   web (nginx, :8080)    │      │  api (gunicorn/Flask)│
+│  React SPA    │─────▶│  static SPA + gzip      │─────▶│  /api/*  :5000       │
+└───────────────┘      │  /api → reverse proxy   │      │  JWT · rate limiting │
+                       └─────────────────────────┘      └──────────┬───────────┘
+                                                                   │
+                           ┌──────────────────────┬────────────────┼──────────────┐
+                           ▼                      ▼                ▼              ▼
+                     OpenWeather API         Groq LLM          TMDB API     MySQL 8.4 (db)
+                     (current weather)  (title suggestions) (movie metadata) users · library
+```
 
+**Recommendation pipeline** (`server/api/services/`):
 
+1. **Validate** the moods against a strict allow-pattern (prompt-injection hardening) and the coordinates.
+2. **Weather:** fetch the current conditions, cached for 10 minutes per ~1 km grid cell.
+3. **LLM:** ask Groq for a JSON list of `{title, year}`. The reply is parsed as JSON, never evaluated, and cached
+   for 15 minutes per mood and weather combination. A circuit breaker skips the LLM for 60 seconds after a failure.
+4. **TMDB:** resolve the titles in parallel (cached for 24 hours) and drop duplicates and films without posters.
+5. **Fallback:** if there are too few results, top up from TMDB `discover`, using a mood/weather → genre mapping.
+6. **Persist** the movie metadata so each user's library can be served with one query.
 
-## Technologies Used
-- ReactJS
-- Vite
-- Tailwind CSS
-- Flask
-- MySQL
+| Directory | Contents |
+|---|---|
+| `client/` | React 18 SPA (Vite, Tailwind, React Router). `src/lib/api.js` is the single network layer. |
+| `client/nginx.conf` | Production web server: SPA routing, `/api` proxy, caching, security headers. |
+| `server/api/` | Flask app factory, routes (`views/`) and external integrations (`services/`). |
+| `server/models/` | SQLAlchemy models and the storage engine. |
+| `server/tests/` | Pytest suite. External APIs are mocked, and the database is in-memory SQLite. |
+| `docker-compose.yml` | Production-style stack: `web`, `api` and `db`, with health checks. |
 
-## External APIs Used
-- [OpenWeatherMap](https://openweathermap.org/api)
-- [TMDB](https://developer.themoviedb.org/docs/getting-started)
-- [Groq](https://groq.com/)
+## Getting started
 
-## Installation
-To install and run Clinema, follow these steps:
+### Prerequisites
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Matsadura/Clinema.git
-   cd clinema
-   ```
+You need free API keys from [OpenWeather](https://home.openweathermap.org/api_keys),
+[Groq](https://console.groq.com/keys) and [TMDB](https://www.themoviedb.org/settings/api).
 
-2. **Set up the environment**:
-   - Ensure you have Docker and Docker Compose installed on your machine.
+```bash
+git clone https://github.com/Matsadura/Clinema.git
+cd Clinema
+cp .env.example .env      # then fill in the keys and passwords
+python3 -c "import secrets; print(secrets.token_hex(32))"   # paste as JWT_SECRET_KEY
+```
 
-3. **Build and run the services**:
-   ```bash
-   docker-compose up --build
-   ```
-   - At first setup Docker will set up MySQL which will cause flask to not recognise it, when that happens 
+### Option A: Docker (recommended)
 
-   ```bash
-   docker-compose down
-   docker-compose up
-   ```
+Requires Docker with Compose v2.
 
-4. **Access the application**:
-   - The API will be available at `http://localhost:5000`
-   - The client can be accessed at `http://localhost:5173`
+```bash
+docker compose up -d --build
+docker compose ps          # wait until all three services are "healthy"
+```
 
-5. **Database setup**:
-   - The MySQL database will be automatically set up by Docker. You can connect to it using the credentials defined in the `docker-compose.yml` file.
+Open **http://localhost:8080**. Set `WEB_PORT` in `.env` to use a different port.
 
+Useful commands:
 
+```bash
+docker compose logs -f api               # follow API logs
+docker compose down                      # stop (data persists in the db_data volume)
+docker compose down -v                   # stop and delete the database volume
+```
+
+### Option B: Local development
+
+Requires Python 3.10+ and Node 20.19+. Start only MySQL in Docker:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+```
+
+Run the API (port 5000):
+
+```bash
+cd server
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m api.app
+```
+
+Run the client (port 5173, which proxies `/api` to the Flask server):
+
+```bash
+cd client
+npm ci
+npm run dev
+```
+
+> Prefer no MySQL at all? Set `DATABASE_URL=sqlite:///clinema.db` before `python -m api.app`.
+
+### Environment variables
+
+All configuration lives in a single root `.env` (see [`.env.example`](.env.example)).
+
+| Variable | Required | Description |
+|---|---|---|
+| `OPENWEATHER_API_KEY` | ✅ | OpenWeather API key |
+| `GROQ_API_KEY` | ✅ | Groq API key (without it, Clinema uses the TMDB genre fallback only) |
+| `TMDB_API_KEY` | ✅ | TMDB v3 API key |
+| `JWT_SECRET_KEY` | ✅ | ≥ 32 random characters. Startup fails in production without it. |
+| `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | ✅ (Docker) | Database credentials |
+| `MYSQL_DATABASE`, `MYSQL_USER` | | Default to `clinema` |
+| `APP_ENV` | | `production` (default in compose) or `development` |
+| `GROQ_MODEL` | | Defaults to `llama-3.3-70b-versatile` |
+| `LLM_TIMEOUT` | | Seconds before falling back (default `20`) |
+| `JWT_EXPIRES_HOURS` | | Token lifetime (default `24`) |
+| `CORS_ORIGINS` | | Comma-separated origins. Only needed if the SPA is hosted on another domain. |
+| `DATABASE_URL` | | Full SQLAlchemy URL that overrides the `MYSQL_*` settings |
+| `RATELIMIT_STORAGE_URI` | | e.g. `redis://…` to share rate limits across workers or hosts |
+| `WEB_PORT` | | Host port for the web container (default `8080`) |
+
+## Testing and quality
+
+```bash
+cd server && pytest              # API, services and pipeline tests (no network needed)
+cd server && pycodestyle api models tests
+cd client && npm test            # Vitest + Testing Library
+cd client && npm run lint && npm run build
+```
+
+## API
+
+The API is documented in [`server/api/README.md`](server/api/README.md). Key endpoints:
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/health` | Readiness probe (checks the database) |
+| `GET` | `/api/weather?lat=&lon=` | Normalised current weather |
+| `POST` | `/api/suggestions` | `{moods?, latitude?, longitude?}` → movies |
+| `POST` | `/api/register` · `/api/login` | Account creation and JWT login |
+| `GET` | `/api/<user_id>/library` | Liked and saved films, with details |
+| `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?}` |
+
+## Deployment notes
+
+- **Single VM** (e.g. a small VPS or Lightsail): install Docker, copy the repo and `.env`, run
+  `docker compose up -d --build`, and put a TLS-terminating proxy (Caddy, Traefik or a cloud load balancer) in
+  front of port 8080.
+- **Managed platforms:** the `server/` and `client/` Dockerfiles are independent, so they can run as two services
+  on Render, Fly.io, Railway or Cloud Run with a managed MySQL. Set `DATABASE_URL`, and set `API_UPSTREAM` on the
+  web service to the API's internal URL. Also set `NGINX_RESOLVER` to that platform's DNS resolver (the default,
+  `127.0.0.11`, is Docker's embedded DNS).
+- Set `TRUSTED_PROXIES` to the number of proxies in front of the API so rate limiting sees real client IPs.
+  Compose sets it to `1` for the bundled Nginx.
+- Rate limits are stored in memory per Gunicorn worker by default. Use Redis (`RATELIMIT_STORAGE_URI`) when you
+  scale out.
 
 ## Authors
 
@@ -80,3 +205,6 @@ To install and run Clinema, follow these steps:
 - [Oumaima NAANAA](https://github.com/naanaa59)
 - [Radouane ABOUNOUAS](https://github.com/RadouaneAbn)
 - [Zidane ZAOUI](https://github.com/matsadura)
+
+Movie data is provided by [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed
+or certified by TMDB. Weather data is from [OpenWeather](https://openweathermap.org/).

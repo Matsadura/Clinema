@@ -1,34 +1,38 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
-      textColor: ['dark', 'dark:hover'],
       colors: {
-        primary: '#369a31', // green
+        primary: {
+          DEFAULT: '#369a31',
+          light: '#4cbf45',
+          dark: '#267222',
+        },
         secondary: {
-          lighter: '#5271ff', // blue-lighter
-          light: '#373944', // blue-light
-          DEFAULT: '#2b2c36', // blue
-          dark: '#23232c', // blue-dark
+          lighter: '#5271ff',
+          light: '#373944',
+          DEFAULT: '#2b2c36',
+          dark: '#23232c',
+          darker: '#1a1a21',
         },
         white: '#ebebec',
-        'white-light': '#ebebec',
       },
       fontFamily: {
-        sans: ['Gothic A1', 'sans-serif'], // Typography
-      },
-      animation: {
-        'infinite-scroll': 'infinite-scroll 25s linear infinite',
+        sans: ['"Gothic A1"', 'system-ui', 'sans-serif'],
       },
       keyframes: {
-        'infinite-scroll': {
-          from: { transform: 'translateX(0)' },
-          to: { transform: 'translateX(-100%)' },
-        }
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.6s infinite',
+        'fade-in': 'fade-in 0.4s ease-out both',
       },
     },
   },
