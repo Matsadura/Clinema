@@ -14,7 +14,7 @@ const STEPS = [
   {
     icon: FiCpu,
     title: 'AI curates a list',
-    body: 'A Llama 3.3 model on Groq suggests films that fit the mood and the moment.',
+    body: 'An open-weight LLM on Groq suggests films that fit the mood and the moment.',
   },
   {
     icon: FiFilm,

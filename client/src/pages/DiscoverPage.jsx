@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FiArrowLeft, FiFilm, FiMapPin } from 'react-icons/fi';
+import { FiArrowLeft, FiFilm, FiMapPin, FiRefreshCw, FiStar } from 'react-icons/fi';
 import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
 import { Alert, Button, EmptyState } from '../components/ui.jsx';
 import { useLocationWeather } from '../context/LocationContext.jsx';
@@ -52,6 +52,11 @@ export default function DiscoverPage() {
           {weather && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-lighter/15 px-3 py-1 text-sm font-medium capitalize text-indigo-200">
               <FiMapPin aria-hidden="true" /> {weather.description}, {weather.temp}°C{weather.city ? ` in ${weather.city}` : ''}
+            </span>
+          )}
+          {result.data?.personalized && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-sm font-medium text-amber-200">
+              <FiStar aria-hidden="true" /> Personalised for you
             </span>
           )}
         </div>
@@ -124,7 +129,17 @@ export default function DiscoverPage() {
                 </Alert>
               )}
               {result.data.movies.length ? (
-                <MovieGrid movies={result.data.movies} library={library} />
+                <>
+                  <MovieGrid movies={result.data.movies} library={library} />
+                  <div className="mt-12 flex flex-col items-center gap-2 text-center">
+                    <Button variant="outline" onClick={result.refresh}>
+                      <FiRefreshCw aria-hidden="true" /> Show different picks
+                    </Button>
+                    <p className="text-xs text-white/50">
+                      You won&apos;t see these films again. Like or dismiss a few to teach Clinema your taste.
+                    </p>
+                  </div>
+                </>
               ) : (
                 <EmptyState icon={FiFilm} title="No matches found" action={<Button onClick={result.retry}>Try again</Button>}>
                   We couldn&apos;t match any films this time. Try a different combination of moods.

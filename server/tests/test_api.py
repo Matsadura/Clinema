@@ -1,4 +1,6 @@
 """Suggestion, weather, movie and health endpoints (pipeline end to end)."""
+import json
+
 import responses
 
 from tests.conftest import (TMDB_DISCOVER, TMDB_SEARCH, WEATHER_URL,
@@ -57,8 +59,10 @@ def test_weather_endpoint_errors(client, mocked):
 # -- suggestions -------------------------------------------------------------
 def test_suggestions_mood_and_weather(client, mocked, fake_llm):
     mocked.get(WEATHER_URL, json=weather_payload())
-    fake_llm.content = '["Amelie", "Before Sunrise", "Up", "Big"]'
-    mock_tmdb_search(mocked, ["Amelie", "Before Sunrise", "Up", "Big"])
+    titles = ["Still Walking", "Paterson", "Up", "Big"]
+    fake_llm.content = json.dumps(titles)
+    mock_tmdb_search(mocked, titles)
+    mocked.get(TMDB_DISCOVER, json={"results": []})
 
     res = client.post("/api/suggestions", json={
         "moods": ["Calm"], "latitude": 48.85, "longitude": 2.35})
@@ -67,13 +71,13 @@ def test_suggestions_mood_and_weather(client, mocked, fake_llm):
     assert data["source"] == "ai"
     assert data["moods"] == ["Calm"]
     assert data["weather"]["condition"] == "Rain"
-    assert [m["title"] for m in data["movies"]][:2] == ["Amelie",
-                                                        "Before Sunrise"]
+    assert [m["title"] for m in data["movies"]] == titles
+    assert all(m["source"] == "ai" for m in data["movies"])
     prompt = fake_llm.calls[0]["messages"][1]["content"]
     assert "Calm" in prompt and "light rain" in prompt
 
     # Suggested movies are cached locally for the library
-    assert client.get("/api/movies/1").get_json()["title"] == "Amelie"
+    assert client.get("/api/movies/1").get_json()["title"] == "Still Walking"
 
 
 def test_suggestions_degrade_when_weather_fails(client, mocked, fake_llm):

@@ -75,6 +75,11 @@ function WeatherPicks({ library }) {
         </Alert>
       )}
       <MovieGrid movies={movies} library={library} />
+      <div className="mt-10 flex justify-center">
+        <Button variant="outline" onClick={picks.refresh}>
+          Show different picks
+        </Button>
+      </div>
     </>
   );
 }

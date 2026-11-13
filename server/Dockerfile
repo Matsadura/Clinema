@@ -30,7 +30,8 @@ RUN groupadd --system --gid 10001 app \
 
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
-COPY gunicorn.conf.py ./
+COPY gunicorn.conf.py alembic.ini ./
+COPY migrations ./migrations
 COPY api ./api
 COPY models ./models
 

@@ -4,16 +4,45 @@
 ``POST /api/suggestions`` is the primary endpoint. The original
 ``/movies_by_*`` routes are kept for backwards compatibility.
 """
+import logging
+
 from flask import current_app, jsonify
+from flask_jwt_extended import get_current_user, verify_jwt_in_request
 
 from api.extensions import limiter
-from api.services import ServiceError
+from api.services import ServiceError, taste
 from api.services.recommender import parse_moods, recommend
 from api.services.weather import get_weather
 from api.views import app_views
 from api.views.helpers import error, json_body, upsert_movies
+from models import storage
 
 SUGGESTION_LIMIT = "20 per minute; 200 per day"
+MAX_SEEN_IDS = 300
+log = logging.getLogger(__name__)
+
+
+def _optional_user():
+    """The signed-in user if a valid token was sent, else None."""
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_current_user()
+    except Exception:  # noqa: BLE001 - bad/expired token -> anonymous
+        return None
+
+
+def _parse_seen_ids(value):
+    """Movie ids the client has already shown (anonymous de-duplication)."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("seen_ids must be a list of movie ids")
+    ids = []
+    for item in value[-MAX_SEEN_IDS:]:
+        if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
+            raise ValueError("seen_ids must be a list of movie ids")
+        ids.append(item)
+    return ids
 
 
 def _run(data, need_mood=False, need_location=False):
@@ -22,6 +51,7 @@ def _run(data, need_mood=False, need_location=False):
         return error("Request body must be a JSON object")
     try:
         moods = parse_moods(data.get('mood', data.get('moods')))
+        seen_ids = _parse_seen_ids(data.get('seen_ids'))
     except ValueError as exc:
         return error(str(exc))
 
@@ -47,9 +77,22 @@ def _run(data, need_mood=False, need_location=False):
                 raise
             weather_error = exc.message  # degrade to mood-only
 
-    result = recommend(moods, weather, config)
+    user = _optional_user()
+    user_id = user.id if user else None
+    result = recommend(moods, weather, config, user_id=user_id,
+                       seen_ids=seen_ids)
     upsert_movies(result["movies"])
+    if user_id:
+        context = {"moods": moods,
+                   "weather": weather["condition"] if weather else None}
+        try:
+            taste.record_recommendations(user_id, result["movies"], context)
+            storage.save()
+        except Exception:  # noqa: BLE001 - history is best effort
+            log.exception("Could not record recommendation history")
     return jsonify({
+        "personalized": result["personalized"],
+        "excluded": result["excluded"],
         "movies": result["movies"],
         "suggestions": result["titles"],
         "source": result["source"],

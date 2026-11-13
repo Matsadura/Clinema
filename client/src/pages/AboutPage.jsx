@@ -15,7 +15,7 @@ const TEAM = [
 const STACK = [
   { group: 'Frontend', items: ['React 18', 'React Router', 'Vite', 'Tailwind CSS'] },
   { group: 'Backend', items: ['Flask 3', 'SQLAlchemy 2', 'JWT auth', 'Gunicorn'] },
-  { group: 'Data & AI', items: ['Groq · Llama 3.3', 'TMDB API', 'OpenWeather API', 'MySQL 8'] },
+  { group: 'Data & AI', items: ['Groq · GPT-OSS 120B', 'TMDB API', 'OpenWeather API', 'MySQL 8'] },
   { group: 'Ops', items: ['Docker multi-stage', 'Nginx', 'Compose healthchecks', 'Pytest · Vitest'] },
 ];
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Contains the class DBStorage, a thin wrapper around a SQLAlchemy session."""
 import logging
+import os
 import time
 from os import getenv
 from urllib.parse import quote_plus
@@ -11,13 +12,15 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from models.base_model import Base
+from models.interaction import Interaction, TasteProfile
 from models.movie import Movie
 from models.user import User
 from models.user_movie import User_Movie
 
 log = logging.getLogger(__name__)
 
-classes = {"Movie": Movie, "User_Movie": User_Movie, "User": User}
+classes = {"Movie": Movie, "User_Movie": User_Movie, "User": User,
+           "Interaction": Interaction}
 
 
 def database_url_from_env():
@@ -34,6 +37,28 @@ def database_url_from_env():
         "?charset=utf8mb4"
 
 
+def alembic_config(connection=None):
+    """Alembic config pointing at server/migrations."""
+    from alembic.config import Config
+    root = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    config = Config(os.path.join(root, "alembic.ini"))
+    config.set_main_option("script_location",
+                           os.path.join(root, "migrations"))
+    if connection is not None:
+        config.attributes["connection"] = connection
+    return config
+
+
+def run_migrations(engine, revision="head"):
+    """Upgrade the database schema to ``revision``."""
+    # Set before importing alembic.command, which logs plugin setup
+    logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
+    from alembic import command
+    with engine.begin() as connection:
+        command.upgrade(alembic_config(connection), revision)
+
+
 class DBStorage:
     """Interacts with the relational database."""
 
@@ -42,10 +67,11 @@ class DBStorage:
         self._session = None
 
     # -- lifecycle ---------------------------------------------------------
-    def reload(self, url=None, retries=10, delay=2.0):
-        """Create the engine, ensure tables exist and open a session.
+    def reload(self, url=None, retries=10, delay=2.0, migrate=True):
+        """Create the engine, bring the schema up to date and open a session.
 
-        Retries while the database is still starting (e.g. in compose).
+        Schema changes are applied with Alembic migrations (``migrate``);
+        retries while the database is still starting (e.g. in compose).
         """
         url = url or database_url_from_env()
         kwargs = {"pool_pre_ping": True}
@@ -58,7 +84,10 @@ class DBStorage:
 
         for attempt in range(1, retries + 1):
             try:
-                Base.metadata.create_all(self._engine)
+                if migrate:
+                    run_migrations(self._engine)
+                else:
+                    Base.metadata.create_all(self._engine)
                 break
             except OperationalError:
                 if attempt == retries:
@@ -90,9 +119,11 @@ class DBStorage:
             return False
 
     def drop_all(self):
-        """Drop every table (tests only)."""
-        Base.metadata.drop_all(self._engine)
-        Base.metadata.create_all(self._engine)
+        """Empty every table (tests only)."""
+        self._session.remove()
+        with self._engine.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
 
     # -- unit of work ------------------------------------------------------
     def new(self, obj):

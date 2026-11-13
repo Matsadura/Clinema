@@ -122,3 +122,67 @@ def register_and_login(client, email="ada@example.com",
                                           "password": password})
     data = res.get_json()
     return data["user_id"], {"Authorization": f"Bearer {data['token']}"}
+
+
+TMDB_DETAILS = "https://api.themoviedb.org/3/movie/"
+
+
+class Catalog:
+    """A fake TMDB: search by title, details by id, and discover."""
+
+    def __init__(self, mocked):
+        self.movies = {}          # tmdb_id -> raw TMDB dict
+        self.discover_ids = []
+        mocked.add_callback(responses_lib.GET, TMDB_SEARCH,
+                            callback=self._search)
+        mocked.add_callback(responses_lib.GET, TMDB_DISCOVER,
+                            callback=self._discover)
+        import re
+        mocked.add_callback(responses_lib.GET,
+                            re.compile(re.escape(TMDB_DETAILS) + r"\d+"),
+                            callback=self._details)
+
+    def add(self, id_, title, year=2000, genres=(), director=None,
+            keywords=(), language="en", aliases=()):
+        from api.services.tmdb import GENRE_IDS
+        raw = tmdb_movie(id_, title, year, original_language=language,
+                         genre_ids=[GENRE_IDS[g.lower()] for g in genres])
+        raw["_aliases"] = [a.lower() for a in aliases]
+        raw["_director"] = director
+        raw["_keywords"] = list(keywords)
+        self.movies[id_] = raw
+        return raw
+
+    def _public(self, raw):
+        return {k: v for k, v in raw.items() if not k.startswith("_")}
+
+    def _search(self, request):
+        query = request.params.get("query", "").lower()
+        hits = [self._public(m) for m in self.movies.values()
+                if m["title"].lower() == query or query in m["_aliases"]]
+        return 200, {}, __import__("json").dumps({"results": hits})
+
+    def _discover(self, request):
+        hits = [self._public(self.movies[i]) for i in self.discover_ids]
+        return 200, {}, __import__("json").dumps({"results": hits})
+
+    def _details(self, request):
+        movie_id = int(request.url.split("?")[0].rsplit("/", 1)[1])
+        raw = self.movies.get(movie_id)
+        if raw is None:
+            return 404, {}, "{}"
+        from api.services.tmdb import GENRES
+        body = self._public(raw)
+        body["genres"] = [{"id": g, "name": GENRES[g]}
+                          for g in raw.get("genre_ids", [])]
+        body["credits"] = {"crew": [{"job": "Director",
+                                     "name": raw["_director"]}]
+                           if raw["_director"] else []}
+        body["keywords"] = {"keywords": [{"name": k}
+                                         for k in raw["_keywords"]]}
+        return 200, {}, __import__("json").dumps(body)
+
+
+@pytest.fixture
+def catalog(mocked):
+    return Catalog(mocked)

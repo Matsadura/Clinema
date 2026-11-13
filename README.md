@@ -15,7 +15,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" />
-  <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_Llama_3.3-F55036" />
+  <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_GPT--OSS-F55036" />
 </p>
 
 ---
@@ -36,10 +36,15 @@ stack ships as small, non-root Docker images with health checks.
 - 🎭 **Mood matching:** pick up to six moods, from *Joyful* to *Reflective*.
 - 🌦️ **Weather-aware:** share your location to factor in live OpenWeather conditions. Denied or unavailable
   location is handled gracefully.
-- 🤖 **AI curation with graceful degradation:** a Llama 3.3 model on Groq suggests titles. If the model is slow,
+- 🤖 **AI curation with graceful degradation:** an open-weight model on Groq (GPT-OSS 120B by default) suggests titles. If the model is slow,
   down or misconfigured, Clinema falls back to TMDB genre discovery, so users always get results.
-- 🎬 **Rich details:** posters, ratings, synopses and a details modal for every film.
-- ❤️ **Library:** like films and keep a watchlist, with optimistic updates.
+- 🎬 **Rich details:** posters, ratings, synopses, and a "Why this pick" explanation for every film.
+- 🔁 **Never the same list twice:** everything you've been shown, opened, liked, dismissed or saved is
+  excluded, both in the prompt and after generation. "Show different picks" always brings new films.
+- 🧠 **Learns your taste:** likes (+2), dislikes (−2), saves (+1) and opened details (+0.5) build a
+  time-decayed taste profile (genres, directors, themes, eras, languages, tone). It's injected into
+  every prompt and shown on your profile page.
+- ❤️ **Library:** likes, a watchlist and a "Not for me" list, with optimistic updates.
 - 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
 - 📱 **Responsive and accessible:** mobile-first layout, keyboard navigation, focus-managed dialogs,
   reduced-motion support.
@@ -65,11 +70,21 @@ stack ships as small, non-root Docker images with health checks.
 
 1. **Validate** the moods against a strict allow-pattern (prompt-injection hardening) and the coordinates.
 2. **Weather:** fetch the current conditions, cached for 10 minutes per ~1 km grid cell.
-3. **LLM:** ask Groq for a JSON list of `{title, year}`. The reply is parsed as JSON, never evaluated, and cached
-   for 15 minutes per mood and weather combination. A circuit breaker skips the LLM for 60 seconds after a failure.
-4. **TMDB:** resolve the titles in parallel (cached for 24 hours) and drop duplicates and films without posters.
-5. **Fallback:** if there are too few results, top up from TMDB `discover`, using a mood/weather → genre mapping.
-6. **Persist** the movie metadata so each user's library can be served with one query.
+3. **Context** (`taste.py`): load the user's persisted taste profile and build a hard exclusion set. The set
+   covers films recommended in the last 30 days plus everything viewed, liked, disliked or saved; guests send
+   `seen_ids` from the browser instead.
+4. **LLM** (`llm.py`): one fresh, uncached generation. The prompt carries the vibe, a compact taste summary
+   (or a cold-start note), the exclusion list, anti-blockbuster rules and two randomly chosen diversity
+   constraints. Output follows a strict JSON schema (`title, year, genres, director, country, tone,
+   mood_weather_fit, personalized_reason`). Sampling uses temperature 0.85 with frequency and presence
+   penalties; models that reject a parameter are retried without it. A circuit breaker and a model fallback
+   list protect against outages.
+5. **Screen and resolve** (`recommender.py`): drop excluded titles (normalised), repeat directors and all but
+   one over-exposed staple. Resolve on TMDB in parallel and drop excluded TMDB ids. If too few remain, retry
+   once with the rejected titles excluded, then backfill from TMDB `discover`, preferring genres you like and
+   leaving out ones you dislike.
+6. **Learn:** shown films are logged as `recommended`. Likes, dislikes, saves and opened details are logged
+   with weights, enriched with TMDB director and keywords, and folded into the profile straight away.
 
 | Directory | Contents |
 |---|---|
@@ -77,6 +92,7 @@ stack ships as small, non-root Docker images with health checks.
 | `client/nginx.conf` | Production web server: SPA routing, `/api` proxy, caching, security headers. |
 | `server/api/` | Flask app factory, routes (`views/`) and external integrations (`services/`). |
 | `server/models/` | SQLAlchemy models and the storage engine. |
+| `server/migrations/` | Alembic migrations, applied automatically on startup. |
 | `server/tests/` | Pytest suite. External APIs are mocked, and the database is in-memory SQLite. |
 | `docker-compose.yml` | Production-style stack: `web`, `api` and `db`, with health checks. |
 
@@ -153,13 +169,25 @@ All configuration lives in a single root `.env` (see [`.env.example`](.env.examp
 | `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | ✅ (Docker) | Database credentials |
 | `MYSQL_DATABASE`, `MYSQL_USER` | | Default to `clinema` |
 | `APP_ENV` | | `production` (default in compose) or `development` |
-| `GROQ_MODEL` | | Defaults to `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | | Comma-separated models in order of preference (default `openai/gpt-oss-120b,openai/gpt-oss-20b`). Retired models are skipped automatically. |
 | `LLM_TIMEOUT` | | Seconds before falling back (default `20`) |
 | `JWT_EXPIRES_HOURS` | | Token lifetime (default `24`) |
 | `CORS_ORIGINS` | | Comma-separated origins. Only needed if the SPA is hosted on another domain. |
 | `DATABASE_URL` | | Full SQLAlchemy URL that overrides the `MYSQL_*` settings |
 | `RATELIMIT_STORAGE_URI` | | e.g. `redis://…` to share rate limits across workers or hosts |
 | `WEB_PORT` | | Host port for the web container (default `8080`) |
+
+### Database migrations
+
+The schema is managed with Alembic and upgraded automatically when the API starts. Databases created by
+earlier releases are adopted without data loss. Run these from `server/`:
+
+```bash
+alembic upgrade head                                  # apply
+alembic downgrade -1                                  # revert the latest migration
+alembic revision --autogenerate -m "describe change"  # after editing models
+alembic check                                         # verify models and migrations agree
+```
 
 ## Testing and quality
 
@@ -181,7 +209,9 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 | `POST` | `/api/suggestions` | `{moods?, latitude?, longitude?}` → movies |
 | `POST` | `/api/register` · `/api/login` | Account creation and JWT login |
 | `GET` | `/api/<user_id>/library` | Liked and saved films, with details |
-| `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?}` |
+| `PUT` | `/api/<user_id>/library/<tmdb_id>` | Set `{like?, save?, dislike?}` |
+| `POST` | `/api/<user_id>/interactions` | Log a view `{movie_id}` |
+| `GET` | `/api/<user_id>/taste` | Learned taste profile and its prompt summary |
 
 ## Deployment notes
 

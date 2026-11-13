@@ -1,5 +1,5 @@
 import { TiStarFullOutline } from 'react-icons/ti';
-import { FiBookmark, FiExternalLink, FiHeart } from 'react-icons/fi';
+import { FiBookmark, FiExternalLink, FiHeart, FiThumbsDown, FiZap } from 'react-icons/fi';
 import Modal from './Modal.jsx';
 import { PosterFallback } from './MovieCard.jsx';
 
@@ -14,9 +14,10 @@ function languageName(code) {
   }
 }
 
-export default function MovieDetails({ movie, onClose, liked, saved, onToggle }) {
+export default function MovieDetails({ movie, onClose, liked, saved, disliked, onToggle }) {
   if (!movie) return null;
-  const { title, poster, backdrop, year, rating, description, language, tmdb_id: tmdbId } = movie;
+  const { title, poster, backdrop, year, rating, description, language, tmdb_id: tmdbId, why, fit, tone, director } = movie;
+  const genres = Array.isArray(movie.genres) ? movie.genres.slice(0, 4) : [];
 
   return (
     <Modal open={!!movie} onClose={onClose} title={title} size="lg" hideTitle>
@@ -43,8 +44,26 @@ export default function MovieDetails({ movie, onClose, liked, saved, onToggle })
               </span>
             )}
             {language && <span>{languageName(language)}</span>}
+            {director && <span>Directed by {director}</span>}
           </div>
+          {(genres.length > 0 || tone) && (
+            <ul className="mt-3 flex flex-wrap gap-2" aria-label="Genres and tone">
+              {genres.map((g) => (
+                <li key={g} className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs">{g}</li>
+              ))}
+              {tone && <li className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs text-primary-light">{tone}</li>}
+            </ul>
+          )}
           <p className="mt-4 leading-relaxed text-white/80">{description || 'No synopsis available yet.'}</p>
+          {(why || fit) && (
+            <section className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm" aria-label="Why this pick">
+              <h3 className="flex items-center gap-2 font-semibold text-primary-light">
+                <FiZap aria-hidden="true" /> Why this pick
+              </h3>
+              {fit && <p className="mt-2 text-white/80">{fit}</p>}
+              {why && <p className="mt-1 text-white/70">{why}</p>}
+            </section>
+          )}
           <div className="mt-6 flex flex-wrap gap-3">
             {onToggle && (
               <>
@@ -63,6 +82,14 @@ export default function MovieDetails({ movie, onClose, liked, saved, onToggle })
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${saved ? 'bg-amber-400 text-secondary-dark' : 'bg-white/10 hover:bg-white/15'}`}
                 >
                   <FiBookmark className={saved ? 'fill-current' : ''} aria-hidden="true" /> {saved ? 'On watchlist' : 'Watchlist'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggle(movie, 'dislike')}
+                  aria-pressed={disliked}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${disliked ? 'bg-slate-200 text-secondary-dark' : 'bg-white/10 hover:bg-white/15'}`}
+                >
+                  <FiThumbsDown className={disliked ? 'fill-current' : ''} aria-hidden="true" /> {disliked ? 'Not for me' : 'Not for me?'}
                 </button>
               </>
             )}

@@ -66,6 +66,18 @@ describe('MovieCard', () => {
     await user.click(screen.getByRole('button', { name: /Heat \(1995\)/ }));
     expect(onOpen).toHaveBeenCalledWith(movie);
   });
+
+  it('offers a "not for me" action and marks dismissed films', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    const { rerender } = render(<MovieCard movie={movie} onToggle={onToggle} />);
+    await user.click(screen.getByRole('button', { name: 'Not for me: Heat' }));
+    expect(onToggle).toHaveBeenCalledWith(movie, 'dislike');
+
+    rerender(<MovieCard movie={movie} disliked onToggle={onToggle} />);
+    expect(screen.getByText('Not for me')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo "not for me" on Heat' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
 
 describe('ErrorBoundary', () => {

@@ -37,6 +37,15 @@ export default function MovieGrid({ movies, library }) {
     [isAuthenticated, library, navigate],
   );
 
+  const logView = library?.logView;
+  const handleOpen = useCallback(
+    (movie) => {
+      setSelected(movie);
+      logView?.(movie); // browsing signal for the taste profile
+    },
+    [logView],
+  );
+
   const entryFor = (movie) => library?.entries?.[movie.tmdb_id];
 
   return (
@@ -53,8 +62,9 @@ export default function MovieGrid({ movies, library }) {
               movie={movie}
               liked={!!entryFor(movie)?.like}
               saved={!!entryFor(movie)?.save}
+              disliked={!!entryFor(movie)?.dislike}
               onToggle={handleToggle}
-              onOpen={setSelected}
+              onOpen={handleOpen}
             />
           </li>
         ))}
@@ -64,6 +74,7 @@ export default function MovieGrid({ movies, library }) {
         onClose={() => setSelected(null)}
         liked={selected ? !!entryFor(selected)?.like : false}
         saved={selected ? !!entryFor(selected)?.save : false}
+        disliked={selected ? !!entryFor(selected)?.dislike : false}
         onToggle={handleToggle}
       />
     </>

@@ -37,8 +37,13 @@ def owner_required(view):
     return wrapper
 
 
+BASE_FIELDS = ('tmdb_id', 'title', 'description', 'poster', 'adult',
+               'popularity', 'year', 'rating', 'language')
+
+
 def upsert_movies(movies):
-    """Store TMDB movies locally (needed for the user's library pages).
+    """Store TMDB movies locally (needed for the library and for taste
+    learning), filling in missing taste features on existing rows.
 
     Best effort: failures are rolled back and ignored.
     """
@@ -46,15 +51,18 @@ def upsert_movies(movies):
         return
     ids = [m["tmdb_id"] for m in movies]
     try:
-        existing = {m.tmdb_id for m in storage.session.query(Movie.tmdb_id)
+        existing = {m.tmdb_id: m for m in storage.session.query(Movie)
                     .filter(Movie.tmdb_id.in_(ids))}
         for data in movies:
-            if data["tmdb_id"] in existing:
-                continue
-            fields = {k: data.get(k) for k in Movie.FIELDS}
-            fields["title"] = (fields["title"] or "")[:128]
-            storage.new(Movie(**fields))
-            existing.add(data["tmdb_id"])
+            movie = existing.get(data["tmdb_id"])
+            if movie is None:
+                fields = {k: data.get(k) for k in BASE_FIELDS}
+                fields["title"] = (fields["title"] or "")[:128]
+                movie = Movie(**fields)
+                storage.new(movie)
+                existing[data["tmdb_id"]] = movie
+            movie.set_features({**data, "tones": [data["tone"]]
+                                if data.get("tone") else None})
         storage.save()
     except IntegrityError:
         storage.rollback()

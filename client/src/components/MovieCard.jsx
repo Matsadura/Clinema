@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { TiStarFullOutline } from 'react-icons/ti';
-import { FiBookmark, FiHeart } from 'react-icons/fi';
+import { FiBookmark, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import { MdMovie } from 'react-icons/md';
 import { Skeleton } from './ui.jsx';
 
@@ -32,12 +32,12 @@ export function ActionButton({ active, onClick, label, activeClass, children }) 
   );
 }
 
-function MovieCard({ movie, liked = false, saved = false, onToggle, onOpen }) {
+function MovieCard({ movie, liked = false, saved = false, disliked = false, onToggle, onOpen }) {
   const [imageFailed, setImageFailed] = useState(false);
   const { title, poster, year, rating } = movie;
 
   return (
-    <article className="group relative animate-fade-in">
+    <article className={`group relative animate-fade-in transition ${disliked ? 'opacity-50 hover:opacity-100' : ''}`}>
       <button
         type="button"
         onClick={() => onOpen?.(movie)}
@@ -45,7 +45,12 @@ function MovieCard({ movie, liked = false, saved = false, onToggle, onOpen }) {
           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light group-hover:-translate-y-1 group-hover:shadow-2xl"
         aria-label={`${title}${year ? ` (${year})` : ''} — view details`}
       >
-        <div className="aspect-[2/3] w-full overflow-hidden">
+        <div className="relative aspect-[2/3] w-full overflow-hidden">
+          {disliked && (
+            <span className="absolute bottom-2 left-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold">
+              Not for me
+            </span>
+          )}
           {poster && !imageFailed ? (
             <img
               src={poster}
@@ -82,6 +87,14 @@ function MovieCard({ movie, liked = false, saved = false, onToggle, onOpen }) {
           </ActionButton>
           <ActionButton active={saved} onClick={() => onToggle(movie, 'save')} label={saved ? `Remove ${title} from watchlist` : `Save ${title} to watchlist`} activeClass="bg-amber-400 text-secondary-dark">
             <FiBookmark className={saved ? 'fill-current' : ''} aria-hidden="true" />
+          </ActionButton>
+          <ActionButton
+            active={disliked}
+            onClick={() => onToggle(movie, 'dislike')}
+            label={disliked ? `Undo "not for me" on ${title}` : `Not for me: ${title}`}
+            activeClass="bg-slate-200 text-secondary-dark"
+          >
+            <FiThumbsDown className={disliked ? 'fill-current' : ''} aria-hidden="true" />
           </ActionButton>
         </div>
       )}

@@ -103,13 +103,17 @@ export const api = {
   weather: (lat, lon, opts) =>
     request(`/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, opts),
 
-  suggestions: ({ moods = [], coords = null }, opts = {}) =>
+  // Sends the token when signed in so results are personalised; seenIds
+  // lets the server avoid repeating films this browser already showed.
+  suggestions: ({ moods = [], coords = null, seenIds = [] }, opts = {}) =>
     request('/suggestions', {
       method: 'POST',
       body: {
         moods,
         ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+        ...(seenIds.length ? { seen_ids: seenIds } : {}),
       },
+      auth: true,
       timeout: SUGGESTION_TIMEOUT,
       ...opts,
     }),
@@ -117,4 +121,11 @@ export const api = {
   library: (userId, opts) => request(`/${encodeURIComponent(userId)}/library`, { auth: true, ...opts }),
   setLibraryFlags: (userId, tmdbId, flags) =>
     request(`/${encodeURIComponent(userId)}/library/${tmdbId}`, { method: 'PUT', body: flags, auth: true }),
+  logView: (userId, tmdbId) =>
+    request(`/${encodeURIComponent(userId)}/interactions`, {
+      method: 'POST',
+      body: { movie_id: tmdbId, event: 'view' },
+      auth: true,
+    }),
+  taste: (userId, opts) => request(`/${encodeURIComponent(userId)}/taste`, { auth: true, ...opts }),
 };

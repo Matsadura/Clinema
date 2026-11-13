@@ -2,6 +2,9 @@
 **
 !requirements.txt
 !gunicorn.conf.py
+!alembic.ini
+!migrations
+!migrations/**
 !api
 !api/**
 !models

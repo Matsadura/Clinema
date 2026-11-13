@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 /**
  * The signed-in user's liked/saved movies.
  *
- * entries: { [tmdbId]: { like, save, movie } }
- * toggle(movie, 'like' | 'save') updates optimistically and rolls back on
- * failure.
+ * entries: { [tmdbId]: { like, save, dislike, movie } }
+ * toggle(movie, 'like' | 'save' | 'dislike') updates optimistically and
+ * rolls back on failure. Like and dislike are mutually exclusive.
+ * logView(movie) records a browsing signal for preference learning.
  */
 export function useLibrary() {
   const { user, isAuthenticated } = useAuth();
@@ -32,7 +33,7 @@ export function useLibrary() {
       .then((rows) => {
         const map = {};
         for (const row of rows || []) {
-          map[row.movie_id] = { like: !!row.like, save: !!row.save, movie: row.movie };
+          map[row.movie_id] = { like: !!row.like, save: !!row.save, dislike: !!row.dislike, movie: row.movie };
         }
         setEntries(map);
         setStatus('ready');
@@ -51,14 +52,17 @@ export function useLibrary() {
       if (!userId) return false;
       const id = movie.tmdb_id;
       const previous = entriesRef.current[id];
-      const base = previous || { like: false, save: false, movie };
+      const base = previous || { like: false, save: false, dislike: false, movie };
       const nextValue = !base[flag];
+      const changes = { [flag]: nextValue };
+      if (nextValue && flag === 'like') changes.dislike = false;
+      if (nextValue && flag === 'dislike') changes.like = false;
       setEntries((current) => ({
         ...current,
-        [id]: { ...(current[id] || base), movie: base.movie || movie, [flag]: nextValue },
+        [id]: { ...(current[id] || base), movie: base.movie || movie, ...changes },
       }));
       try {
-        await api.setLibraryFlags(userId, id, { [flag]: nextValue });
+        await api.setLibraryFlags(userId, id, changes);
         return true;
       } catch (err) {
         setEntries((current) => {
@@ -76,5 +80,17 @@ export function useLibrary() {
 
   const reload = useCallback(() => setReloadKey((n) => n + 1), []);
 
-  return { entries, status, error, toggle, reload, clearError: () => setError(null) };
+  // Opening a film's details is a (weak) positive signal. Logged once per
+  // film per page view; failures are silent because it is best effort.
+  const viewed = useRef(new Set());
+  const logView = useCallback(
+    (movie) => {
+      if (!userId || !movie?.tmdb_id || viewed.current.has(movie.tmdb_id)) return;
+      viewed.current.add(movie.tmdb_id);
+      api.logView(userId, movie.tmdb_id).catch(() => {});
+    },
+    [userId],
+  );
+
+  return { entries, status, error, toggle, logView, reload, clearError: () => setError(null) };
 }
