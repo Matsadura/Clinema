@@ -2,23 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Clinema design tokens — a dark-room theatre palette.
+ * Components use these through Tailwind (see tailwind.config.js); never hard-
+ * code colours. Contrast (WCAG AA) is noted against the canvas.
+ */
+:root {
+  /* Surfaces */
+  --canvas: 13 14 17;           /* #0D0E11 page background */
+  --raised: 20 22 27;           /* #14161B header, bars, inputs */
+  --surface: 26 29 36;          /* #1A1D24 cards, drawer, menus */
+  --surface-hover: 34 38 47;    /* #22262F hover/pressed */
+  --line: 255 255 255;          /* hairlines use this at 8% / 14% */
+
+  /* Text */
+  --ink: 243 244 246;           /* #F3F4F6 titles/body  17.5:1 */
+  --muted: 156 163 175;         /* #9CA3AF metadata      7.6:1 */
+  --subtle: 134 141 153;        /* #868D99 labels        5.8:1 (spec #6B7280 fails AA) */
+
+  /* Accent — warm projector amber */
+  --accent: 229 169 60;         /* #E5A93C CTAs, active, ratings  9.3:1 */
+  --accent-strong: 217 155 38;  /* #D99B26 hover/pressed */
+  --accent-ink: 20 17 11;       /* #14110B text on amber          9.0:1 */
+
+  /* Semantic feedback (muted, never neon) */
+  --like: 95 174 139;           /* #5FAE8B muted emerald  7.3:1 */
+  --dislike: 210 115 92;        /* #D2735C terracotta     5.8:1 */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @layer base {
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-secondary-dark text-white;
+    @apply bg-canvas font-sans text-ink antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
   }
 
   ::selection {
-    @apply bg-primary/60 text-white;
+    background: rgb(var(--accent) / 0.35);
+    color: rgb(var(--ink));
+  }
+
+  /* One consistent, visible focus ring for every interactive element */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   input[type='search']::-webkit-search-cancel-button {
     filter: invert(1);
     opacity: 0.5;
+  }
+}
+
+@layer components {
+  /* Numbers that should line up: years, ratings, counts */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Small uppercase section label */
+  .label {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-subtle;
+  }
+
+  .field {
+    @apply block w-full rounded-md border border-line/10 bg-raised px-3 py-2 text-sm text-ink
+      placeholder:text-subtle transition-colors duration-150 ease-out
+      hover:border-line/[0.18] focus:border-accent/60 focus:outline-none;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
 

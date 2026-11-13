@@ -26,21 +26,19 @@ export default class ErrorBoundary extends Component {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div role="alert" className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-6 text-center">
-        <p className="text-5xl" aria-hidden="true">🎞️</p>
-        <h1 className="mt-4 text-2xl font-bold">Something went wrong</h1>
-        <p className="mt-2 text-white/60">
-          An unexpected error broke this page. Reloading usually fixes it.
-        </p>
-        <div className="mt-6 flex gap-3">
+      <div role="alert" className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <p className="label">Error</p>
+        <h1 className="mt-3 font-display text-display text-ink">Something went wrong.</h1>
+        <p className="mt-3 max-w-prose text-muted">An unexpected error broke this page. Reloading usually fixes it.</p>
+        <div className="mt-8 flex gap-3">
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-xl bg-primary px-5 py-2.5 font-semibold hover:bg-primary-light"
+            className="h-10 rounded-md bg-accent px-4 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-strong"
           >
             Reload page
           </button>
-          <a href="/" className="rounded-xl bg-white/10 px-5 py-2.5 font-semibold hover:bg-white/15">
+          <a href="/" className="inline-flex h-10 items-center rounded-md px-4 text-sm font-medium text-muted transition-colors hover:text-ink">
             Go home
           </a>
         </div>

@@ -1,10 +1,20 @@
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { IoClose } from 'react-icons/io5';
+import { FiX } from 'react-icons/fi';
 
-/** Accessible modal dialog: Escape/overlay to close, focus management,
- *  and background scroll lock. */
-export default function Modal({ open, onClose, title, children, size = 'md', hideTitle = false }) {
+const PANELS = {
+  // Centred dialog (confirmations)
+  dialog:
+    'relative m-4 w-full max-w-md animate-fade-in rounded-md border border-line/[0.08] bg-surface',
+  // Detail drawer: right-hand panel on desktop, bottom sheet on mobile
+  drawer:
+    'absolute inset-x-0 bottom-0 max-h-[92vh] animate-sheet-up overflow-y-auto rounded-t-lg border-t border-line/[0.08] bg-surface ' +
+    'sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(560px,100vw)] sm:animate-slide-in sm:rounded-none sm:border-l sm:border-t-0',
+};
+
+/** Accessible modal: Escape/overlay close, focus trap and restore,
+ *  background scroll lock. */
+export default function Modal({ open, onClose, title, children, variant = 'dialog', hideTitle = false }) {
   const panelRef = useRef(null);
   const titleId = useId();
 
@@ -42,30 +52,22 @@ export default function Modal({ open, onClose, title, children, size = 'md', hid
   }, [open, onClose]);
 
   if (!open) return null;
-  const widths = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl' };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className={`relative max-h-[92vh] w-full ${widths[size]} animate-fade-in overflow-y-auto rounded-t-3xl border border-white/10 bg-secondary shadow-2xl focus:outline-none sm:rounded-3xl`}
-      >
-        <div className={`flex items-center justify-between gap-4 px-6 pt-5 ${hideTitle ? 'absolute right-0 top-0 z-10' : ''}`}>
-          <h2 id={titleId} className={hideTitle ? 'sr-only' : 'text-xl font-bold'}>
+    <div className={`fixed inset-0 z-50 ${variant === 'dialog' ? 'flex items-center justify-center' : ''}`}>
+      <div className="absolute inset-0 animate-fade-in bg-black/70" onClick={onClose} aria-hidden="true" />
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className={`${PANELS[variant]} focus:outline-none`}>
+        <div className={`flex items-start justify-between gap-4 ${hideTitle ? 'absolute right-0 top-0 z-10 p-3' : 'px-6 pt-6'}`}>
+          <h2 id={titleId} className={hideTitle ? 'sr-only' : 'font-display text-display-sm text-ink'}>
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-black/40 p-2 text-white/80 hover:bg-black/60 hover:text-white"
-            aria-label="Close dialog"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-canvas/80 text-muted transition-colors hover:text-ink"
+            aria-label="Close"
           >
-            <IoClose className="h-5 w-5" />
+            <FiX className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         {children}

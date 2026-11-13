@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { GiHamburgerMenu } from 'react-icons/gi';
-import { IoClose } from 'react-icons/io5';
-import { FiLogOut, FiUser, FiHeart } from 'react-icons/fi';
+import { FiMenu, FiX } from 'react-icons/fi';
 import logo from '../images/brand-logo-light.svg';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const linkClass = ({ isActive }) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition hover:text-primary-light ${isActive ? 'text-primary-light' : 'text-white/80'}`;
+  `relative py-1 text-sm transition-colors duration-150 ${
+    isActive ? 'text-ink after:absolute after:inset-x-0 after:-bottom-[17px] after:h-px after:bg-accent' : 'text-muted hover:text-ink'
+  }`;
 
-export function Avatar({ user, size = 'h-9 w-9' }) {
+export function Avatar({ user, size = 'h-8 w-8 text-xs' }) {
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase() || '?';
   return (
-    <span className={`grid ${size} place-items-center rounded-full bg-gradient-to-br from-primary to-secondary-lighter text-sm font-bold`} aria-hidden="true">
+    <span className={`grid ${size} place-items-center rounded-full border border-line/[0.14] bg-surface font-medium text-ink`} aria-hidden="true">
       {initials}
     </span>
   );
@@ -26,7 +26,6 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Close menus on navigation
   useEffect(() => {
     setMobileOpen(false);
     setMenuOpen(false);
@@ -34,9 +33,7 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!menuOpen) return undefined;
-    const onClick = (e) => {
-      if (!menuRef.current?.contains(e.target)) setMenuOpen(false);
-    };
+    const onClick = (e) => !menuRef.current?.contains(e.target) && setMenuOpen(false);
     const onKey = (e) => e.key === 'Escape' && setMenuOpen(false);
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
@@ -51,121 +48,107 @@ export default function Navbar() {
     navigate('/');
   };
 
-  const links = (
-    <>
-      <NavLink to="/" end className={linkClass}>
-        Discover
-      </NavLink>
-      <NavLink to="/about" className={linkClass}>
-        How it works
-      </NavLink>
-      {isAuthenticated && (
-        <NavLink to="/library" className={linkClass}>
-          My library
-        </NavLink>
-      )}
-    </>
-  );
+  // The one place navigation is defined; desktop and mobile both render it.
+  const links = [
+    { to: '/', label: 'Discover', end: true },
+    ...(isAuthenticated ? [{ to: '/library', label: 'Library' }] : []),
+    { to: '/about', label: 'About' },
+  ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-secondary-dark/80 backdrop-blur-lg">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2">
+    <header className="sticky top-0 z-40 border-b border-line/[0.08] bg-canvas">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink">
         Skip to content
       </a>
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Main">
-        <div className="flex items-center gap-8">
+      <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Main">
+        <div className="flex items-center gap-10">
           <Link to="/" className="shrink-0" aria-label="Clinema home">
-            <img src={logo} alt="Clinema" className="h-8 w-auto" width="120" height="32" />
+            <img src={logo} alt="Clinema" className="h-6 w-auto" width="105" height="24" />
           </Link>
-          <div className="hidden items-center gap-1 md:flex">{links}</div>
+          <div className="hidden items-center gap-6 md:flex">
+            {links.map((l) => (
+              <NavLink key={l.to} to={l.to} end={l.end} className={linkClass}>
+                {l.label}
+              </NavLink>
+            ))}
+          </div>
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden md:block">
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 rounded-full p-1 pr-3 hover:bg-white/5"
+                className="flex items-center rounded-full"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
+                aria-label={`Account menu for ${user?.first_name || 'you'}`}
               >
                 <Avatar user={user} />
-                <span className="text-sm font-medium">{user?.first_name}</span>
               </button>
               {menuOpen && (
-                <div role="menu" className="absolute right-0 mt-2 w-48 animate-fade-in overflow-hidden rounded-xl border border-white/10 bg-secondary py-1 shadow-xl">
-                  <Link role="menuitem" to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5">
-                    <FiUser aria-hidden="true" /> Profile
+                <div role="menu" className="absolute right-0 mt-2 w-52 animate-fade-in rounded-md border border-line/[0.08] bg-surface py-1">
+                  <p className="truncate px-3 py-2 text-xs text-subtle">{user?.email}</p>
+                  <Link role="menuitem" to="/profile" className="block px-3 py-2 text-sm text-muted hover:bg-surface-hover hover:text-ink">
+                    Profile &amp; settings
                   </Link>
-                  <Link role="menuitem" to="/library" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5">
-                    <FiHeart aria-hidden="true" /> My library
-                  </Link>
-                  <button role="menuitem" type="button" onClick={handleLogout} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-white/5">
-                    <FiLogOut aria-hidden="true" /> Sign out
+                  <button role="menuitem" type="button" onClick={handleLogout} className="block w-full px-3 py-2 text-left text-sm text-muted hover:bg-surface-hover hover:text-ink">
+                    Sign out
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <>
-              <Link to="/auth" className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:text-white">
-                Sign in
-              </Link>
-              <Link to="/auth?mode=signup" className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold hover:bg-primary-light">
-                Sign up
-              </Link>
-            </>
+            <Link to="/auth" className="text-sm font-medium text-ink transition-colors hover:text-accent">
+              Sign in
+            </Link>
           )}
         </div>
 
         <button
           type="button"
-          className="rounded-lg p-2 text-xl md:hidden"
+          className="-mr-2 grid h-10 w-10 place-items-center rounded-md text-muted hover:text-ink md:hidden"
           onClick={() => setMobileOpen((o) => !o)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         >
-          {mobileOpen ? <IoClose /> : <GiHamburgerMenu />}
+          {mobileOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
         </button>
       </nav>
 
       {mobileOpen && (
-        <div id="mobile-menu" className="animate-fade-in border-t border-white/5 px-4 pb-4 md:hidden">
-          {isAuthenticated && (
-            <div className="flex items-center gap-3 py-4">
-              <Avatar user={user} />
-              <div>
-                <p className="font-semibold">
-                  {user?.first_name} {user?.last_name}
-                </p>
-                <p className="text-xs text-white/50">{user?.email}</p>
-              </div>
-            </div>
-          )}
-          <div className="flex flex-col gap-1">
-            {links}
+        <div id="mobile-menu" className="animate-fade-in border-t border-line/[0.08] px-4 pb-4 md:hidden">
+          <ul className="flex flex-col">
+            {links.map((l) => (
+              <li key={l.to}>
+                <NavLink to={l.to} end={l.end} className={({ isActive }) => `block py-3 text-base ${isActive ? 'text-accent' : 'text-ink'}`}>
+                  {l.label}
+                </NavLink>
+              </li>
+            ))}
             {isAuthenticated ? (
               <>
-                <NavLink to="/profile" className={linkClass}>
-                  Profile
-                </NavLink>
-                <button type="button" onClick={handleLogout} className="rounded-lg px-3 py-2 text-left text-sm font-medium text-white/80">
-                  Sign out
-                </button>
+                <li>
+                  <NavLink to="/profile" className={({ isActive }) => `block py-3 text-base ${isActive ? 'text-accent' : 'text-ink'}`}>
+                    Profile &amp; settings
+                  </NavLink>
+                </li>
+                <li>
+                  <button type="button" onClick={handleLogout} className="block w-full py-3 text-left text-base text-muted">
+                    Sign out
+                  </button>
+                </li>
               </>
             ) : (
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Link to="/auth" className="rounded-xl border border-white/15 px-4 py-2 text-center text-sm font-semibold">
+              <li>
+                <Link to="/auth" className="block py-3 text-base text-ink">
                   Sign in
                 </Link>
-                <Link to="/auth?mode=signup" className="rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold">
-                  Sign up
-                </Link>
-              </div>
+              </li>
             )}
-          </div>
+          </ul>
         </div>
       )}
     </header>
