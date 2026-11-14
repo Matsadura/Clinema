@@ -54,7 +54,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-clinema}
       MYSQL_USER: ${MYSQL_USER:-clinema}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      TRUSTED_PROXIES: "1"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-1}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     depends_on:
       db:
@@ -74,7 +74,7 @@ services:
     environment:
       API_UPSTREAM: http://api:5000
     ports:
-      - "${WEB_PORT:-8080}:8080"
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
     depends_on:
       api:
         condition: service_healthy

@@ -1,0 +1,7 @@
+# Copy to /etc/caddy/Caddyfile and replace the hostname with yours, e.g.
+# 203-0-113-5.sslip.io (free, no sign-up) or yourname.duckdns.org.
+# Caddy obtains and renews the Let's Encrypt certificate automatically.
+example.sslip.io {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+}
