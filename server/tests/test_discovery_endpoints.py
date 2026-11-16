@@ -149,3 +149,47 @@ def test_history_backfills_films_missing_from_cache(client, catalog):
     storage.save()
     data = client.get(f"/api/{uid}/history", headers=h).get_json()
     assert data[0]["movie"]["title"] == "Tokyo Story"
+
+
+# -- trailers ------------------------------------------------------------
+TMDB_VIDEOS = "https://api.themoviedb.org/3/movie/7/videos"
+
+
+def _video(key, type_="Trailer", official=True, site="YouTube",
+           published="2024-01-01T00:00:00.000Z", name=None):
+    return {"key": key, "type": type_, "official": official, "site": site,
+            "published_at": published, "name": name or key}
+
+
+def test_trailers_rank_official_trailers_first(client, mocked):
+    mocked.get(TMDB_VIDEOS, json={"results": [
+        _video("teaser00001", "Teaser"),
+        _video("fanmade0001", official=False),
+        _video("older000001", published="2020-01-01T00:00:00.000Z"),
+        _video("newer000001", published="2024-06-01T00:00:00.000Z"),
+        _video("featurette1", "Featurette"),
+        _video("vimeo000001", site="Vimeo"),
+        _video("bad key<script>"),
+    ]})
+    res = client.get("/api/movies/7/trailers")
+    assert res.status_code == 200
+    assert [v["key"] for v in res.get_json()] == [
+        "newer000001", "older000001", "teaser00001", "fanmade0001"]
+    assert mocked.calls[0].request.params["include_video_language"] == "en,null"
+    client.get("/api/movies/7/trailers")
+    assert len(mocked.calls) == 1  # cached
+
+
+def test_trailers_fall_back_to_any_language(client, mocked):
+    mocked.get(TMDB_VIDEOS, json={"results": []})
+    mocked.get(TMDB_VIDEOS, json={"results": [_video("original001")]})
+    assert [v["key"] for v in client.get("/api/movies/7/trailers").get_json()] == ["original001"]
+    assert "include_video_language" not in mocked.calls[1].request.params
+
+
+def test_trailers_none_and_upstream_failure(client, mocked):
+    mocked.get(TMDB_VIDEOS, json={"results": []})
+    mocked.get(TMDB_VIDEOS, json={"results": []})
+    assert client.get("/api/movies/7/trailers").get_json() == []
+    mocked.get("https://api.themoviedb.org/3/movie/8/videos", status=500)
+    assert client.get("/api/movies/8/trailers").status_code == 502
