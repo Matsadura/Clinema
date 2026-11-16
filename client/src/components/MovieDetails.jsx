@@ -1,6 +1,7 @@
 import { FiBookmark, FiCheck, FiExternalLink, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import Modal from './Modal.jsx';
 import { PosterFallback, Rating } from './MovieCard.jsx';
+import TrailerPlayer from './TrailerPlayer.jsx';
 
 const LANGUAGES = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], { type: 'language' }) : null;
 
@@ -54,6 +55,8 @@ export default function MovieDetails({ movie, onClose, liked, saved, disliked, s
               {director && <p className="mt-1 text-sm text-muted">Directed by {director}</p>}
             </div>
           </div>
+
+          {tmdbId && <TrailerPlayer key={tmdbId} tmdbId={tmdbId} title={title} backdrop={backdrop} />}
 
           {(genres.length > 0 || tone) && (
             <p className="mt-6 text-sm text-subtle">
