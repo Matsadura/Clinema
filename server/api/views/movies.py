@@ -7,6 +7,7 @@ Routes:
     - GET  /movies/trending    This week's trending films
     - POST /movies             Cache a movie (auth required)
     - GET  /movies/<tmdb_id>   Get one movie by TMDB id
+    - GET  /movies/<tmdb_id>/trailers  YouTube trailers for a movie
 """
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required
@@ -95,3 +96,19 @@ def get_movie(tmdb_id):
         return error('Movie not found', 404)
     upsert_movies([data])
     return jsonify(data)
+
+
+@app_views.route('/movies/<int:tmdb_id>/trailers', methods=['GET'])
+@limiter.limit("60 per minute")
+def movie_trailers(tmdb_id):
+    """YouTube trailers and teasers, best first (cached for a day).
+
+    An empty list means TMDB has none; 502 means TMDB couldn't be reached.
+    """
+    keys = request_keys()["tmdb"]
+    if not keys:
+        return error('Movie database is not configured', 503)
+    found = tmdb.trailers(tmdb_id, keys)
+    if found is None:
+        return error('Trailers are unavailable right now', 502)
+    return jsonify(found)

@@ -1,5 +1,6 @@
 """The Movie Database (TMDB) integration."""
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -268,3 +269,45 @@ def _trending(api_key):
 def trending(api_key):
     """This week's trending films (with posters and backdrops)."""
     return _with_keys(_trending, api_key) or []
+
+
+_VIDEO_TYPES = {"Trailer": 0, "Teaser": 1}
+_YOUTUBE_KEY = re.compile(r"^[A-Za-z0-9_-]{6,20}$")
+
+
+def _youtube_trailers(results):
+    videos = [v for v in results
+              if v.get("site") == "YouTube" and v.get("type") in _VIDEO_TYPES
+              and _YOUTUBE_KEY.match(v.get("key") or "")]
+    # Official trailers first, then teasers; newest first within each
+    videos.sort(key=lambda v: v.get("published_at") or "", reverse=True)
+    videos.sort(key=lambda v: (not v.get("official"), _VIDEO_TYPES[v["type"]]))
+    return [{"key": v["key"], "name": (v.get("name") or v["type"])[:120],
+             "type": v["type"], "official": bool(v.get("official"))}
+            for v in videos[:6]]
+
+
+@TTLMemo(maxsize=2048, ttl=24 * 3600)
+def _trailers(tmdb_id, api_key):
+    """YouTube trailers and teasers, English first, then any language."""
+    try:
+        status, body = _get(f"/movie/{int(tmdb_id)}/videos",
+                            {"api_key": api_key,
+                             "include_video_language": "en,null"}, api_key)
+        if status != 200 or body is None:
+            return None
+        found = _youtube_trailers(body.get("results") or [])
+        if not found:  # e.g. a film only trailed in its original language
+            status, body = _get(f"/movie/{int(tmdb_id)}/videos",
+                                {"api_key": api_key}, api_key)
+            if status == 200 and body:
+                found = _youtube_trailers(body.get("results") or [])
+    except requests.RequestException as exc:
+        log.warning("TMDB videos failed: %s", redact(exc))
+        return None
+    return found
+
+
+def trailers(tmdb_id, api_key):
+    """See _trailers; ``api_key`` may be a list of candidate keys."""
+    return _with_keys(_trailers, api_key, tmdb_id)
