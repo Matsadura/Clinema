@@ -30,3 +30,13 @@ def stats():
     return {"Users": storage.count(User),
             "Movies": storage.count(Movie),
             "User_Movies": storage.count(User_Movie)}
+
+
+@app_views.route('/features')
+@limiter.exempt
+def features():
+    """Optional features this server has configured (for the UI)."""
+    from flask import current_app
+
+    from api.services import mailer
+    return {"password_reset": mailer.configured(current_app.config)}

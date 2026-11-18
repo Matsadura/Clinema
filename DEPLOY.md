@@ -59,6 +59,26 @@ With DuckDNS, keep the IP current with a cron entry (only needed if the IP can c
 */5 * * * * curl -fsS "https://www.duckdns.org/update?domains=NAME&token=TOKEN&ip=" >/dev/null
 ```
 
+## Email (password reset)
+
+"Forgot password?" appears only once SMTP is configured. Any provider works;
+[Brevo](https://www.brevo.com) has a free tier (300 emails/day) and lets you
+send from a verified single address, so no domain is needed. Add to `.env`:
+
+```
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USERNAME=<your Brevo SMTP login>
+SMTP_PASSWORD=<your Brevo SMTP key>
+MAIL_FROM=Clinema <the-address-you-verified@example.com>
+APP_URL=https://clinema.duckdns.org
+```
+
+then `docker compose up -d --wait`. Check with
+`curl https://<host>/api/features` (should report `"password_reset": true`).
+Reset links expire after an hour, work once, and resetting signs out every
+other session.
+
 ## Backups
 
 [`deploy/backup.sh`](deploy/backup.sh) writes a consistent, compressed dump to

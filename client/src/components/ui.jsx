@@ -97,3 +97,15 @@ export function PageSpinner({ label = 'Loading' }) {
 /** Text-style link button used for secondary inline actions. */
 export const textLink =
   'font-medium text-ink underline decoration-line/30 underline-offset-4 transition-colors duration-150 hover:decoration-accent';
+
+/** Labelled text input in the standard field style. */
+export function Field({ label, id, ...props }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm text-muted">
+        {label}
+      </label>
+      <input id={id} name={id} className="field h-10" {...props} />
+    </div>
+  );
+}

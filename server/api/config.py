@@ -62,6 +62,17 @@ def build_config(overrides=None):
         "GROQ_MODEL": os.getenv("GROQ_MODEL", ""),  # "" -> llm.DEFAULT_MODELS
         "LLM_TIMEOUT": _int("LLM_TIMEOUT", 20),
         "TMDB_API_KEY": os.getenv("TMDB_API_KEY", ""),
+        # Outgoing email (password reset). Unset SMTP_HOST disables it.
+        "SMTP_HOST": os.getenv("SMTP_HOST", ""),
+        "SMTP_PORT": _int("SMTP_PORT", 587),
+        "SMTP_USERNAME": os.getenv("SMTP_USERNAME", ""),
+        "SMTP_PASSWORD": os.getenv("SMTP_PASSWORD", ""),
+        # starttls (port 587), ssl (465) or none (local test servers only)
+        "SMTP_SECURITY": os.getenv("SMTP_SECURITY", "starttls").lower(),
+        "MAIL_FROM": os.getenv("MAIL_FROM", ""),
+        # Public base URL used in emailed links, e.g. https://example.org
+        "APP_URL": os.getenv("APP_URL", "").rstrip("/"),
+        "PASSWORD_RESET_MAX_AGE": _int("PASSWORD_RESET_MAX_AGE", 3600),
     }
     config["KEY_ENCRYPTION_KEY"] = os.getenv("KEY_ENCRYPTION_KEY", "")
     if overrides:

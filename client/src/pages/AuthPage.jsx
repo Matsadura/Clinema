@@ -1,24 +1,15 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Alert, Button, textLink } from '../components/ui.jsx';
+import { Alert, Button, Field, textLink } from '../components/ui.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-
-function Field({ label, id, ...props }) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block text-sm text-muted">
-        {label}
-      </label>
-      <input id={id} name={id} className="field h-10" {...props} />
-    </div>
-  );
-}
+import { useFeatures } from '../hooks/useFeatures.js';
 
 export default function AuthPage() {
   const [params, setParams] = useSearchParams();
   const mode = params.get('mode') === 'signup' ? 'signup' : 'signin';
   const { login, register, isAuthenticated } = useAuth();
+  const features = useFeatures();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
@@ -96,6 +87,13 @@ export default function AuthPage() {
           value={form.password}
           onChange={update('password')}
         />
+        {mode === 'signin' && features.password_reset && (
+          <p className="-mt-3 text-right text-sm">
+            <Link to="/forgot-password" state={{ email: form.email }} className="text-subtle transition-colors hover:text-ink">
+              Forgot password?
+            </Link>
+          </p>
+        )}
         {mode === 'signup' && (
           <Field label="Confirm password" id="confirm" type="password" autoComplete="new-password" required value={form.confirm} onChange={update('confirm')} />
         )}

@@ -15,6 +15,8 @@ const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
 const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
 const PersonPage = lazy(() => import('./pages/PersonPage.jsx'));
 const SharedWatchlistPage = lazy(() => import('./pages/SharedWatchlistPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/PasswordResetPages.jsx').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/PasswordResetPages.jsx').then((m) => ({ default: m.ResetPasswordPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
 
 /** /discover used to be a separate results page; it now lives on "/". */
@@ -44,6 +46,8 @@ function AppRoutes() {
         <Route path="auth" element={<AuthPage />} />
         <Route path="person/:personId" element={<PersonPage />} />
         <Route path="w/:shareId" element={<SharedWatchlistPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="library" element={<RequireAuth><LibraryPage /></RequireAuth>} />
         <Route path="history" element={<RequireAuth><HistoryPage /></RequireAuth>} />
         <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />

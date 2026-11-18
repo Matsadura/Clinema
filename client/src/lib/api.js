@@ -95,6 +95,9 @@ export const api = {
   login: (email, password) => request('/login', { method: 'POST', body: { email, password } }),
   register: (payload) => request('/register', { method: 'POST', body: payload }),
   me: () => request('/auth_validate', { auth: true }),
+  features: () => request('/features'),
+  forgotPassword: (email) => request('/password/forgot', { method: 'POST', body: { email } }),
+  resetPassword: (token, password) => request('/password/reset', { method: 'POST', body: { token, password } }),
   updateProfile: (userId, payload) =>
     request(`/users/${encodeURIComponent(userId)}/profile`, { method: 'PUT', body: payload, auth: true }),
   deleteAccount: (userId) =>
