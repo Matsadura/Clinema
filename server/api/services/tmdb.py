@@ -1,5 +1,6 @@
 """The Movie Database (TMDB) integration."""
 import logging
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,7 +11,8 @@ from api.services.credentials import (KeyRejected, as_list, redact,
 from api.services.http import TTLMemo, get_json
 
 log = logging.getLogger(__name__)
-API = "https://api.themoviedb.org/3"
+# Overridable only so end-to-end tests can point at a local fake
+API = os.getenv("TMDB_API_URL", "https://api.themoviedb.org/3").rstrip("/")
 IMAGE_BASE = "https://image.tmdb.org/t/p/"
 _pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tmdb")
 

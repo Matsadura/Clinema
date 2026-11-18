@@ -48,6 +48,44 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  e2e:
+    name: E2E · Playwright on the Docker stack
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    timeout-minutes: 20
+    env:
+      # Throwaway values: TMDB and Groq are replaced by e2e/fake_upstreams.py
+      APP_ENV: production
+      JWT_SECRET_KEY: e2e-jwt-secret-that-is-at-least-32-characters
+      MYSQL_PASSWORD: e2e-db-password
+      MYSQL_ROOT_PASSWORD: e2e-db-root-password
+      TMDB_API_KEY: e2e-fake-key
+      COMPOSE_FILE: docker-compose.yml:docker-compose.e2e.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      - run: npx playwright install --with-deps chromium
+        working-directory: client
+      - name: Start the stack
+        run: docker compose up -d --build --wait
+      - run: npx playwright test
+        working-directory: client
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: client/playwright-report
+          retention-days: 7
+
   docker:
     name: Docker · build${{ github.event_name == 'push' && ' & publish' || '' }} images
     runs-on: ubuntu-latest

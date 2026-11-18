@@ -1,0 +1,31 @@
+# End-to-end test stack: the real web, API, database and Redis, with TMDB
+# and Groq replaced by a local fake (e2e/fake_upstreams.py).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build --wait
+#   cd client && npx playwright test
+services:
+  fakes:
+    image: python:3.12.16-slim-bookworm
+    command: ["python", "-u", "/srv/fake_upstreams.py"]
+    volumes:
+      - ./e2e/fake_upstreams.py:/srv/fake_upstreams.py:ro
+    read_only: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - frontend
+
+  api:
+    environment:
+      TMDB_API_URL: http://fakes:9000/3
+      GROQ_BASE_URL: http://fakes:9000
+      GROQ_API_KEY: e2e-fake-key
+      TMDB_API_KEY: e2e-fake-key
+      # Test runs sign up many accounts from one IP
+      RATELIMIT_ENABLED: "false"
+    depends_on:
+      fakes:
+        condition: service_healthy

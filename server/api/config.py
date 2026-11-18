@@ -52,6 +52,9 @@ def build_config(overrides=None):
         "RATELIMIT_STORAGE_URI": os.getenv("RATELIMIT_STORAGE_URI",
                                            "memory://"),
         "RATELIMIT_HEADERS_ENABLED": True,
+        # Only ever disabled for automated end-to-end runs
+        "RATELIMIT_ENABLED": os.getenv("RATELIMIT_ENABLED", "true").lower()
+        != "false",
         # If Redis is unreachable, keep limiting per worker instead of
         # failing requests
         "RATELIMIT_IN_MEMORY_FALLBACK_ENABLED": True,
