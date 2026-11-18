@@ -32,6 +32,21 @@ services:
     networks:
       - backend
 
+  # Shared rate-limit counters for every API worker (nothing persisted)
+  redis:
+    <<: *hardening
+    image: redis:7.4.7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "32mb", "--maxmemory-policy", "volatile-ttl"]
+    read_only: true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
   api:
     <<: *hardening
     build:
@@ -49,7 +64,7 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-}
       LLM_TIMEOUT: ${LLM_TIMEOUT:-20}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      RATELIMIT_STORAGE_URI: ${RATELIMIT_STORAGE_URI:-memory://}
+      RATELIMIT_STORAGE_URI: ${RATELIMIT_STORAGE_URI:-redis://redis:6379/0}
       DB_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-clinema}
       MYSQL_USER: ${MYSQL_USER:-clinema}
@@ -58,6 +73,8 @@ services:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     read_only: true
     tmpfs:

@@ -52,6 +52,10 @@ def build_config(overrides=None):
         "RATELIMIT_STORAGE_URI": os.getenv("RATELIMIT_STORAGE_URI",
                                            "memory://"),
         "RATELIMIT_HEADERS_ENABLED": True,
+        # If Redis is unreachable, keep limiting per worker instead of
+        # failing requests
+        "RATELIMIT_IN_MEMORY_FALLBACK_ENABLED": True,
+        "RATELIMIT_SWALLOW_ERRORS": True,
         "TRUSTED_PROXIES": _int("TRUSTED_PROXIES", 0),
         "DATABASE_URL": None,  # None -> derived from env by DBStorage
         "GROQ_API_KEY": os.getenv("GROQ_API_KEY", ""),

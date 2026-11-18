@@ -7,6 +7,7 @@ proxies to the web container on `127.0.0.1:8080`. No paid domain is needed:
 
 ```
 internet ──443──▶ Caddy (host) ──▶ 127.0.0.1:8080 nginx (web) ──▶ api (gunicorn) ──▶ db (MySQL)
+                                                                         └──▶ redis (rate limits)
 ```
 
 ## 1. Server basics (Ubuntu)
@@ -49,7 +50,8 @@ docker compose up -d --build --wait
 
 Install Caddy from its [official apt repo](https://caddyserver.com/docs/install#debian-ubuntu-raspbian),
 copy [`deploy/Caddyfile`](deploy/Caddyfile) to `/etc/caddy/Caddyfile`, set your
-hostname, then `sudo systemctl reload caddy`.
+hostname, then `sudo systemctl reload caddy`. It also sends HSTS, so browsers
+only ever use HTTPS for the site.
 
 With DuckDNS, keep the IP current with a cron entry (only needed if the IP can change):
 
@@ -57,13 +59,42 @@ With DuckDNS, keep the IP current with a cron entry (only needed if the IP can c
 */5 * * * * curl -fsS "https://www.duckdns.org/update?domains=NAME&token=TOKEN&ip=" >/dev/null
 ```
 
+## Backups
+
+[`deploy/backup.sh`](deploy/backup.sh) writes a consistent, compressed dump to
+`~/clinema-backups/clinema-YYYY-MM-DD.sql.gz`, checks it, and keeps 14 days.
+Schedule it nightly (`crontab -e`):
+
+```
+15 3 * * * cd ~/Clinema && deploy/backup.sh >> ~/clinema-backups/backup.log 2>&1
+```
+
+Backups on the same disk don't survive losing the server: now and then copy
+them elsewhere, e.g. `scp -r ubuntu@SERVER:clinema-backups ./`.
+
+Restore into the running stack:
+
+```bash
+gunzip -c ~/clinema-backups/clinema-2026-01-31.sql.gz \
+  | docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"'
+```
+
+## Monitoring
+
+[`.github/workflows/uptime.yml`](.github/workflows/uptime.yml) checks
+`/api/health` every 30 minutes; GitHub emails you when a scheduled run fails.
+Point it at your host with the repository variable `HEALTHCHECK_URL`. GitHub
+pauses scheduled workflows after 60 days without repository activity; re-enable
+it from the Actions tab if that happens.
+
 ## Operating it
 
 | Task | Command |
 | --- | --- |
 | Update | `git pull && docker compose up -d --build --wait` |
 | Status / logs | `docker compose ps` · `docker compose logs -f api` |
-| Back up the DB | `docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysqldump -u "$MYSQL_USER" "$MYSQL_DATABASE"' \| gzip > backup.sql.gz` |
-| Restore | `gunzip -c backup.sql.gz \| docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"'` |
+| Back up now | `deploy/backup.sh` |
 
 Containers use `restart: unless-stopped`, so they come back after a reboot.
+Rate limits are shared by all API workers through the bundled Redis; if Redis
+is down the API falls back to per-worker limits rather than failing.
