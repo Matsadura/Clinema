@@ -175,7 +175,8 @@ def test_trailers_rank_official_trailers_first(client, mocked):
     assert res.status_code == 200
     assert [v["key"] for v in res.get_json()] == [
         "newer000001", "older000001", "teaser00001", "fanmade0001"]
-    assert mocked.calls[0].request.params["include_video_language"] == "en,null"
+    params = mocked.calls[0].request.params
+    assert params["include_video_language"] == "en,null"
     client.get("/api/movies/7/trailers")
     assert len(mocked.calls) == 1  # cached
 
@@ -183,7 +184,8 @@ def test_trailers_rank_official_trailers_first(client, mocked):
 def test_trailers_fall_back_to_any_language(client, mocked):
     mocked.get(TMDB_VIDEOS, json={"results": []})
     mocked.get(TMDB_VIDEOS, json={"results": [_video("original001")]})
-    assert [v["key"] for v in client.get("/api/movies/7/trailers").get_json()] == ["original001"]
+    data = client.get("/api/movies/7/trailers").get_json()
+    assert [v["key"] for v in data] == ["original001"]
     assert "include_video_language" not in mocked.calls[1].request.params
 
 
