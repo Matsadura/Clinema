@@ -311,3 +311,117 @@ def _trailers(tmdb_id, api_key):
 def trailers(tmdb_id, api_key):
     """See _trailers; ``api_key`` may be a list of candidate keys."""
     return _with_keys(_trailers, api_key, tmdb_id)
+
+
+# -- movie extras: where to watch, cast, similar films -------------------
+_REGION = re.compile(r"^[A-Z]{2}$")
+PROVIDER_GROUPS = (("stream", ("flatrate", "free", "ads")),
+                   ("rent", ("rent",)), ("buy", ("buy",)))
+
+
+def valid_region(value):
+    value = (value or "").strip().upper()
+    return value if _REGION.match(value) else None
+
+
+def _providers(raw, region):
+    """Providers for one country, grouped as stream / rent / buy."""
+    found = ((raw.get("watch/providers") or {}).get("results") or {}) \
+        .get(region) or {}
+    out = {"region": region, "link": None}
+    if isinstance(found.get("link"), str) and \
+            found["link"].startswith("https://www.themoviedb.org/"):
+        out["link"] = found["link"]
+    for group, kinds in PROVIDER_GROUPS:
+        seen, items = set(), []
+        for kind in kinds:
+            for p in sorted(found.get(kind) or [],
+                            key=lambda p: p.get("display_priority") or 99):
+                pid = p.get("provider_id")
+                if pid in seen or not p.get("provider_name"):
+                    continue
+                seen.add(pid)
+                items.append({"id": pid, "name": p["provider_name"][:60],
+                              "logo": _image(p.get("logo_path"), "w92")})
+        out[group] = items[:8]
+    return out
+
+
+def _cast(raw, limit=12):
+    cast = sorted((raw.get("credits") or {}).get("cast") or [],
+                  key=lambda c: c.get("order", 999))
+    return [{"id": c["id"], "name": c["name"][:80],
+             "character": (c.get("character") or "")[:80] or None,
+             "photo": _image(c.get("profile_path"), "w185")}
+            for c in cast[:limit] if c.get("id") and c.get("name")]
+
+
+@TTLMemo(maxsize=512, ttl=12 * 3600)
+def _extras(tmdb_id, region, api_key):
+    try:
+        status, body = _get(
+            f"/movie/{int(tmdb_id)}",
+            {"api_key": api_key,
+             "append_to_response": "credits,recommendations,similar,"
+                                   "watch/providers"}, api_key)
+    except requests.RequestException as exc:
+        log.warning("TMDB extras failed: %s", redact(exc))
+        return None
+    if status != 200 or not body:
+        return None
+    related = [normalize(r) for r in
+               (body.get("recommendations") or {}).get("results") or []
+               if r.get("poster_path")]
+    if len(related) < 6:  # thin recommendations: pad with "similar"
+        ids = {m["tmdb_id"] for m in related}
+        related += [normalize(r) for r in
+                    (body.get("similar") or {}).get("results") or []
+                    if r.get("poster_path") and r["id"] not in ids]
+    return {"tmdb_id": int(tmdb_id),
+            "providers": _providers(body, region),
+            "cast": _cast(body),
+            "similar": [m for m in related if not m["adult"]][:12]}
+
+
+def extras(tmdb_id, region, api_key):
+    """Where to watch (in ``region``), top cast and similar films."""
+    return _with_keys(_extras, api_key, tmdb_id, region)
+
+
+@TTLMemo(maxsize=256, ttl=12 * 3600)
+def _person(person_id, api_key):
+    try:
+        status, body = _get(f"/person/{int(person_id)}",
+                            {"api_key": api_key,
+                             "append_to_response": "movie_credits"}, api_key)
+    except requests.RequestException as exc:
+        log.warning("TMDB person failed: %s", redact(exc))
+        return None
+    if status != 200 or not body:
+        return None
+    credits = body.get("movie_credits") or {}
+    roles = {}
+    for c in credits.get("cast") or []:
+        roles.setdefault(c["id"], (c, c.get("character") or None))
+    for c in credits.get("crew") or []:
+        if c.get("job") == "Director":
+            roles[c["id"]] = (roles.get(c["id"], (c,))[0], "Director")
+    movies = []
+    for raw, role in roles.values():
+        if not raw.get("poster_path") or raw.get("adult"):
+            continue
+        movies.append(dict(normalize(raw), role=(role or "")[:80] or None))
+    movies.sort(key=lambda m: m["popularity"], reverse=True)
+    return {"id": body["id"], "name": (body.get("name") or "")[:120],
+            "photo": _image(body.get("profile_path"), "h632"),
+            "known_for": body.get("known_for_department"),
+            "birthday": body.get("birthday"),
+            "deathday": body.get("deathday"),
+            "place_of_birth": (body.get("place_of_birth") or "")[:120] or None,
+            "biography": (body.get("biography") or "")[:3000],
+            "movies": movies[:40]}
+
+
+def person(person_id, api_key):
+    """A cast or crew member and their best-known films."""
+    return _with_keys(_person, api_key, person_id)

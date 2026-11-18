@@ -195,3 +195,101 @@ def test_trailers_none_and_upstream_failure(client, mocked):
     assert client.get("/api/movies/7/trailers").get_json() == []
     mocked.get("https://api.themoviedb.org/3/movie/8/videos", status=500)
     assert client.get("/api/movies/8/trailers").status_code == 502
+
+
+# -- extras: where to watch, cast, similar --------------------------------
+TMDB_MOVIE_7 = "https://api.themoviedb.org/3/movie/7"
+
+
+def _extras_body(**over):
+    body = tmdb_movie(7, "Heat", 1995)
+    body.update({
+        "credits": {"cast": [
+            {"id": 2, "name": "Robert De Niro", "character": "Neil",
+             "order": 1, "profile_path": "/dn.jpg"},
+            {"id": 1, "name": "Al Pacino", "character": "Vincent",
+             "order": 0, "profile_path": None},
+        ]},
+        "recommendations": {"results": [
+            tmdb_movie(20, "Thief", 1981), tmdb_movie(21, "No Poster",
+                                                      poster=None)]},
+        "similar": {"results": [tmdb_movie(20, "Thief", 1981),
+                                tmdb_movie(22, "Ronin", 1998)]},
+        "watch/providers": {"results": {
+            "MA": {"link":
+                   "https://www.themoviedb.org/movie/7/watch?locale=MA",
+                   "flatrate": [{"provider_id": 8, "provider_name": "Netflix",
+                                 "logo_path": "/n.jpg",
+                                 "display_priority": 2}],
+                   "free": [{"provider_id": 8, "provider_name": "Netflix",
+                             "logo_path": "/n.jpg"}],
+                   "rent": [{"provider_id": 2, "provider_name": "Apple TV",
+                             "logo_path": "/a.jpg"}]},
+            "US": {"link": "javascript:alert(1)"}}},
+    })
+    body.update(over)
+    return body
+
+
+def test_extras_for_region(client, mocked):
+    mocked.get(TMDB_MOVIE_7, json=_extras_body())
+    res = client.get("/api/movies/7/extras?region=ma")
+    assert res.status_code == 200
+    data = res.get_json()
+    prov = data["providers"]
+    assert prov["region"] == "MA" and prov["link"].endswith("locale=MA")
+    assert [p["name"] for p in prov["stream"]] == ["Netflix"]  # de-duped
+    assert prov["stream"][0]["logo"].endswith("/w92/n.jpg")
+    assert [p["name"] for p in prov["rent"]] == ["Apple TV"]
+    assert prov["buy"] == []
+    assert [c["name"] for c in data["cast"]] == ["Al Pacino",
+                                                 "Robert De Niro"]
+    assert data["cast"][0]["photo"] is None
+    # Thin recommendations are padded from "similar", without duplicates
+    assert [m["title"] for m in data["similar"]] == ["Thief", "Ronin"]
+    params = mocked.calls[0].request.params
+    assert "watch/providers" in params["append_to_response"]
+    # Similar films are cached locally for the library
+    assert client.get("/api/movies/22").get_json()["title"] == "Ronin"
+
+
+def test_extras_unsafe_link_and_missing_region(client, mocked):
+    mocked.get(TMDB_MOVIE_7, json=_extras_body())
+    prov = client.get("/api/movies/7/extras?region=US") \
+        .get_json()["providers"]
+    assert prov["link"] is None and prov["stream"] == []
+    prov = client.get("/api/movies/7/extras?region=FR") \
+        .get_json()["providers"]
+    assert prov == {"region": "FR", "link": None, "stream": [], "rent": [],
+                    "buy": []}
+
+
+def test_extras_validation_and_upstream_failure(client, mocked):
+    assert client.get("/api/movies/7/extras?region=USA").status_code == 400
+    assert client.get("/api/movies/7/extras?region=1x").status_code == 400
+    mocked.get(TMDB_MOVIE_7, status=500)
+    assert client.get("/api/movies/7/extras").status_code == 502
+
+
+def test_person_lists_films_by_popularity_with_roles(client, mocked):
+    mocked.get("https://api.themoviedb.org/3/person/5", json={
+        "id": 5, "name": "Michael Mann", "profile_path": "/mm.jpg",
+        "known_for_department": "Directing", "biography": "Director.",
+        "movie_credits": {
+            "cast": [tmdb_movie(30, "Cameo", 2000, popularity=1,
+                                character="Himself")],
+            "crew": [tmdb_movie(7, "Heat", 1995, popularity=80,
+                                job="Director"),
+                     tmdb_movie(31, "Produced", 2001, job="Producer"),
+                     tmdb_movie(32, "Unposterd", job="Director",
+                                poster=None)],
+        }})
+    data = client.get("/api/people/5").get_json()
+    assert data["name"] == "Michael Mann" and data["photo"].endswith("mm.jpg")
+    assert [(m["title"], m["role"]) for m in data["movies"]] == [
+        ("Heat", "Director"), ("Cameo", "Himself")]
+
+
+def test_person_not_found(client, mocked):
+    mocked.get("https://api.themoviedb.org/3/person/6", status=404)
+    assert client.get("/api/people/6").status_code == 404
