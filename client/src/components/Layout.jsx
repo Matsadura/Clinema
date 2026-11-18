@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Sidebar, Topbar } from './Shell.jsx';
+import { OfflineNotice, Sidebar, Topbar } from './Shell.jsx';
 import Footer from './Footer.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import { PageSpinner } from './ui.jsx';
@@ -29,6 +29,7 @@ export default function Layout() {
           </ErrorBoundary>
         </main>
         <Footer />
+        <OfflineNotice />
       </div>
     </div>
   );

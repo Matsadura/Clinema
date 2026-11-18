@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiClock, FiHeart, FiHome, FiInfo, FiMenu, FiMoon, FiSearch, FiSettings, FiX } from 'react-icons/fi';
+import { FiClock, FiDownload, FiHeart, FiHome, FiInfo, FiMenu, FiMoon, FiSearch, FiSettings, FiWifiOff, FiX } from 'react-icons/fi';
 import logo from '../images/brand-logo-light.svg';
 import logoDark from '../images/brand-logo-dark.svg';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import SearchBox from './SearchBox.jsx';
+import { useInstallPrompt, useOffline } from '../lib/pwa.js';
 
 export function Avatar({ user, size = 'h-9 w-9 text-xs' }) {
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase() || '?';
@@ -85,6 +86,32 @@ export function ThemeSwitch() {
   );
 }
 
+/** Shown only when the browser offers installation (Chrome, Edge, Android). */
+export function InstallButton() {
+  const [available, install] = useInstallPrompt();
+  if (!available) return null;
+  return (
+    <button
+      type="button"
+      onClick={install}
+      className="flex w-full items-center gap-3 rounded-md border border-line/[0.08] px-3 py-2.5 text-sm text-muted transition-colors hover:text-ink"
+    >
+      <FiDownload className="h-4 w-4" aria-hidden="true" /> Install app
+    </button>
+  );
+}
+
+/** A quiet notice while there's no connection. */
+export function OfflineNotice() {
+  const offline = useOffline();
+  if (!offline) return null;
+  return (
+    <div role="status" className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit items-center gap-2 rounded-full border border-line/[0.12] bg-surface px-4 py-2 text-sm text-ink shadow-lg">
+      <FiWifiOff className="h-4 w-4 text-accent" aria-hidden="true" /> You’re offline — recommendations will be back when you reconnect.
+    </div>
+  );
+}
+
 /** Desktop sidebar. */
 export function Sidebar() {
   const { isAuthenticated } = useAuth();
@@ -106,6 +133,7 @@ export function Sidebar() {
             Sign in
           </Link>
         )}
+        <InstallButton />
         <ThemeSwitch />
       </div>
     </aside>
@@ -260,6 +288,7 @@ export function Topbar() {
                   Sign in
                 </Link>
               )}
+              <InstallButton />
               <ThemeSwitch />
             </div>
           </div>
