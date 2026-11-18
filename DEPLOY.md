@@ -87,11 +87,32 @@ Point it at your host with the repository variable `HEALTHCHECK_URL`. GitHub
 pauses scheduled workflows after 60 days without repository activity; re-enable
 it from the Actions tab if that happens.
 
+## Updates without building on the server
+
+Every push to `main` publishes multi-arch (amd64 + arm64) images to GitHub
+Container Registry: `ghcr.io/<owner>/clinema-api` and `clinema-web`, tagged
+`latest` and with the short commit SHA. To use them instead of compiling on a
+small VPS:
+
+1. Make both packages public once (GitHub → your profile → Packages →
+   package → Package settings → Change visibility), or run
+   `docker login ghcr.io` on the server with a token that has `read:packages`.
+2. Add to `.env`:
+   ```
+   API_IMAGE=ghcr.io/<owner>/clinema-api:latest
+   WEB_IMAGE=ghcr.io/<owner>/clinema-web:latest
+   ```
+3. Update with `deploy/update.sh`. It pulls the new images, restarts what
+   changed and waits for health checks; if pulling fails it builds locally.
+
+To roll back, pin a previous SHA tag (e.g. `clinema-api:sha-1a2b3c4`) in `.env`
+and run `docker compose up -d --wait`.
+
 ## Operating it
 
 | Task | Command |
 | --- | --- |
-| Update | `git pull && docker compose up -d --build --wait` |
+| Update | `deploy/update.sh` |
 | Status / logs | `docker compose ps` · `docker compose logs -f api` |
 | Back up now | `deploy/backup.sh` |
 

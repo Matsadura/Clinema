@@ -51,7 +51,9 @@ services:
     <<: *hardening
     build:
       context: ./server
-    image: clinema-api:latest
+    # Prebuilt image from CI (API_IMAGE=ghcr.io/<owner>/clinema-api:latest)
+    # or the local build
+    image: ${API_IMAGE:-clinema-api:latest}
     # Explicit mapping (instead of env_file) so the API only receives what it
     # needs — e.g. never the MySQL root password.
     environment:
@@ -87,7 +89,7 @@ services:
     <<: *hardening
     build:
       context: ./client
-    image: clinema-web:latest
+    image: ${WEB_IMAGE:-clinema-web:latest}
     environment:
       API_UPSTREAM: http://api:5000
     ports:
