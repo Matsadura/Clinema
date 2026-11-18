@@ -116,6 +116,9 @@ export const api = {
 
   searchMovies: (query, opts) => request(`/movies/search?q=${encodeURIComponent(query)}`, opts),
   trending: (opts) => request('/movies/trending', opts),
+  movieExtras: (tmdbId, region, opts) =>
+    request(`/movies/${encodeURIComponent(tmdbId)}/extras?region=${encodeURIComponent(region)}`, opts),
+  person: (personId, opts) => request(`/people/${encodeURIComponent(personId)}`, opts),
   trailers: (tmdbId, opts) => request(`/movies/${encodeURIComponent(tmdbId)}/trailers`, opts),
   history: (userId, opts) => request(`/${encodeURIComponent(userId)}/history`, { auth: true, ...opts }),
 
