@@ -3,6 +3,7 @@ import MovieGrid, { MovieGridSkeleton } from '../components/MovieGrid.jsx';
 import { Alert, EmptyState, textLink } from '../components/ui.jsx';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+import ShareWatchlist from '../components/ShareWatchlist.jsx';
 
 const TABS = [
   { id: 'liked', flag: 'like', label: 'Liked', empty: 'Nothing liked yet.', hint: 'Like a film from any list and it lands here.' },
@@ -31,7 +32,10 @@ export default function LibraryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-      <h1 className="font-display text-display text-ink">Library</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="font-display text-display text-ink">Library</h1>
+        {active.id === 'saved' && <ShareWatchlist />}
+      </div>
 
       <div
         role="tablist"

@@ -122,6 +122,11 @@ export const api = {
   trailers: (tmdbId, opts) => request(`/movies/${encodeURIComponent(tmdbId)}/trailers`, opts),
   history: (userId, opts) => request(`/${encodeURIComponent(userId)}/history`, { auth: true, ...opts }),
 
+  watchlistShare: (userId, opts) => request(`/${encodeURIComponent(userId)}/watchlist/share`, { auth: true, ...opts }),
+  setWatchlistShare: (userId, body) =>
+    request(`/${encodeURIComponent(userId)}/watchlist/share`, { method: 'PUT', body, auth: true }),
+  sharedWatchlist: (shareId, opts) => request(`/shared/${encodeURIComponent(shareId)}`, opts),
+
   library: (userId, opts) => request(`/${encodeURIComponent(userId)}/library`, { auth: true, ...opts }),
   setLibraryFlags: (userId, tmdbId, flags) =>
     request(`/${encodeURIComponent(userId)}/library/${tmdbId}`, { method: 'PUT', body: flags, auth: true }),
