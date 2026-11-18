@@ -13,6 +13,7 @@
 import logging
 import random
 import re
+import time
 
 from api.services import ServiceError, credentials, llm, taste, tmdb
 
@@ -22,6 +23,11 @@ MAX_MOODS = 6
 MIN_RESULTS = 4
 TARGET_RESULTS = llm.MAX_TITLES
 LLM_ROUNDS = 2
+# A second LLM round roughly doubles the wait, so it only runs when the
+# first left the list badly short and there's still time; otherwise TMDB
+# discovery (sub-second) tops the list up.
+SECOND_ROUND_BELOW = 8
+SECOND_ROUND_BUDGET = 8.0  # seconds already spent
 MAX_OVEREXPOSED = 1
 _OVEREXPOSED = {taste.normalize_title(t) for t in llm.OVEREXPOSED}
 _MOOD_RE = re.compile(r"^[A-Za-z][A-Za-z \-']{0,31}$")
@@ -155,8 +161,14 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
     picker = _Picker(exclusion, TARGET_RESULTS)
     taste_text = taste.summarize(profile)
     ai_titles = []
+    started = time.monotonic()
+    llm_seconds = 0.0
 
-    for _ in range(LLM_ROUNDS):
+    for round_no in range(LLM_ROUNDS):
+        if round_no and (len(picker.movies) >= SECOND_ROUND_BELOW or
+                         time.monotonic() - started > SECOND_ROUND_BUDGET):
+            break
+        llm_started = time.monotonic()
         need = picker.target - len(picker.movies)
         try:
             items = llm.suggest_titles(
@@ -168,6 +180,8 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
         except llm.LLMError as exc:
             log.info("LLM unavailable, using discovery: %s", exc)
             break
+        finally:
+            llm_seconds += time.monotonic() - llm_started
         ai_titles += [i["title"] for i in items]
         picker.add(tmdb.lookup_many(picker.screen(items), tmdb_key), "ai")
         if len(picker.movies) >= picker.target - 1:
@@ -188,6 +202,9 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
             if ai_count >= MIN_RESULTS:
                 break  # a small top-up is enough when the AI did its job
 
+    log.info("recommend: %d films (%d ai) in %.1fs, llm %.1fs",
+             len(picker.movies), ai_count, time.monotonic() - started,
+             llm_seconds)
     if not picker.movies:
         raise ServiceError("We couldn't find recommendations right now. "
                            "Please try again in a moment.")

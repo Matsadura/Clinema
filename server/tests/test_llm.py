@@ -1,4 +1,8 @@
 """LLM response parsing and prompt construction."""
+import sys
+import time
+from types import SimpleNamespace
+
 import pytest
 
 from api.services import llm
@@ -124,3 +128,50 @@ def test_reasoning_models_get_low_effort(fake_llm):
     assert fake_llm.calls[0]["reasoning_effort"] == "low"
     llm.suggest_titles(["Sad"], "key", "qwen/qwen3.8-27b")
     assert "reasoning_effort" not in fake_llm.calls[1]
+
+
+class Busy(Exception):
+    status_code = 429
+
+    def __init__(self, retry_after=None):
+        super().__init__("rate limited")
+        headers = {"retry-after": retry_after} if retry_after else {}
+        self.response = SimpleNamespace(headers=headers)
+
+
+def test_rate_limited_model_fails_over_at_once_and_rests(monkeypatch):
+    class Client(FakeLLM):
+        def _create(self, **kwargs):
+            if kwargs["model"] == "big":
+                self.calls.append(kwargs)
+                raise Busy(retry_after="7")
+            return super()._create(**kwargs)
+
+    fake = Client(content='["Stalker"]')
+    monkeypatch.setattr(llm, "_get_client", lambda *a, **k: fake)
+    assert llm.suggest_titles(["Calm"], "key", "big, small")
+    assert [c["model"] for c in fake.calls] == ["big", "small"]
+    rest = llm._model_down_until[(llm._fingerprint("key"), "big")]
+    assert 6 < rest - time.monotonic() <= 7
+
+    # While resting, the busy model is skipped entirely
+    llm.suggest_titles(["Sad"], "key", "big, small")
+    assert [c["model"] for c in fake.calls][2:] == ["small"]
+
+
+def test_retry_after_is_bounded():
+    assert llm._retry_after(Busy()) == llm.MODEL_COOLDOWN_DEFAULT
+    assert llm._retry_after(Busy("9999")) == llm.MODEL_COOLDOWN_MAX
+    assert llm._retry_after(Busy("0")) == 1.0
+
+
+def test_client_never_sleeps_through_sdk_retries(monkeypatch):
+    seen = {}
+
+    class Groq:
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+
+    monkeypatch.setitem(sys.modules, "groq", SimpleNamespace(Groq=Groq))
+    llm._get_client("key", 5)
+    assert seen["max_retries"] == 0

@@ -265,3 +265,21 @@ def test_anonymous_requests_get_cold_start_context(client, catalog, pool,
                        json={"moods": ["Joyful"]}).get_json()
     assert data["personalized"] is False
     assert "cold start" in user_prompts(fake_llm)[0]
+
+
+def test_no_second_llm_round_when_first_is_nearly_enough(
+        app, catalog, pool, fake_llm):
+    # 9 usable films: below target, but enough to top up from discovery
+    # instead of waiting for another LLM round
+    fake_llm.content = titles_payload(pool[:9])
+    catalog.discover_ids = list(range(10, 31))
+    result = recommend(["Calm"], TEST_CONFIG)
+    assert len(fake_llm.calls) == 1
+    sources = [m["source"] for m in result["movies"]]
+    assert sources.count("ai") == 9 and "discover" in sources
+
+
+def test_prompt_asks_for_spare_candidates(app, catalog, pool, fake_llm):
+    fake_llm.content = titles_payload(pool[:20])
+    recommend(["Calm"], TEST_CONFIG)
+    assert "Recommend 20 films." in user_prompts(fake_llm)[0]

@@ -23,13 +23,22 @@ from api.services.credentials import KeyRejected, as_list, report_rejected
 
 log = logging.getLogger(__name__)
 MAX_TITLES = 12
-EXTRA_CANDIDATES = 4   # ask for a few more than needed to absorb filtering
+# Ask for extra candidates: exclusions, director/staple rules and TMDB
+# misses typically drop a third of a reply, and a second LLM round costs far
+# more time than a few more output tokens.
+EXTRA_CANDIDATES = 8
 # After a failure, skip a key for this many seconds (circuit breaker) so a
 # dead or slow provider doesn't add latency to every request. State is per
 # key, so one user's broken key never disables the LLM for anyone else.
 COOLDOWN_SECONDS = 60
 REJECTED_COOLDOWN_SECONDS = 3600  # key answered 401/403
 _down_until = {}  # key fingerprint -> monotonic time
+# (key fingerprint, model) -> monotonic time: a model that answered 429 or
+# 5xx is skipped (Groq's rate limits are per model) so the next one is tried
+# at once instead of the SDK sleeping through retries.
+_model_down_until = {}
+MODEL_COOLDOWN_DEFAULT = 20
+MODEL_COOLDOWN_MAX = 60
 
 SAMPLING = {"temperature": 0.85, "top_p": 0.95,
             "frequency_penalty": 0.4, "presence_penalty": 0.6}
@@ -145,8 +154,10 @@ def _get_client(api_key, timeout):
     with _client_lock:
         if fingerprint not in _clients:
             from groq import Groq  # imported lazily: heavy import
+            # No SDK retries: a 429/5xx falls through to the next model
+            # immediately (see _generate) rather than sleeping for seconds
             _clients[fingerprint] = Groq(api_key=api_key, timeout=timeout,
-                                         max_retries=1)
+                                         max_retries=0)
         return _clients[fingerprint]
 
 
@@ -262,6 +273,21 @@ def _status(exc):
     return getattr(exc, "status_code", None)
 
 
+def _retry_after(exc):
+    """Seconds to rest a model after a 429/5xx (Retry-After, bounded)."""
+    headers = getattr(getattr(exc, "response", None), "headers", None) or {}
+    try:
+        wait = float(headers.get("retry-after"))
+    except (TypeError, ValueError):
+        wait = MODEL_COOLDOWN_DEFAULT
+    return min(max(wait, 1.0), MODEL_COOLDOWN_MAX)
+
+
+def _is_overloaded(exc):
+    status = _status(exc)
+    return status == 429 or (status is not None and status >= 500)
+
+
 def _is_model_missing(exc):
     """True if Groq says the requested model doesn't exist/was retired."""
     text = str(exc).lower()
@@ -337,14 +363,24 @@ def _complete(client, model, messages):
 def _generate(messages, api_key, models, timeout):
     client = _get_client(api_key, timeout)
     fingerprint = _fingerprint(api_key)
+    now = time.monotonic()
     for model in models:
-        if (fingerprint, model) in _unavailable_models:
+        if (fingerprint, model) in _unavailable_models or \
+                now < _model_down_until.get((fingerprint, model), 0.0):
             continue
         try:
             content = _complete(client, model, messages)
         except Exception as exc:  # noqa: BLE001
             if _status(exc) in (401, 403):
                 raise KeyRejected("groq", api_key)
+            if _is_overloaded(exc):
+                wait = _retry_after(exc)
+                _model_down_until[(fingerprint, model)] = \
+                    time.monotonic() + wait
+                log.warning("Groq model %s is busy (HTTP %s); resting it "
+                            "%.0fs and trying the next model", model,
+                            _status(exc), wait)
+                continue
             if _is_model_missing(exc):
                 _unavailable_models.add((fingerprint, model))
                 log.error("Groq model %r is unavailable; trying the next "
@@ -407,6 +443,7 @@ def suggest_titles(moods, api_key, model, timeout=20,
 def reset_circuit():
     """Re-enable the LLM immediately (used by tests)."""
     _down_until.clear()
+    _model_down_until.clear()
     _unavailable_models.clear()
     _unsupported.clear()
     _clients.clear()
