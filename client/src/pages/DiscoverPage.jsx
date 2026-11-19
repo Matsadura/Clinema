@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useMovieDrawer } from '../context/MovieDrawerContext.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { parseMoodParam } from '../lib/moods.js';
+import { backdropImage } from '../lib/images.js';
 
 /** Today's featured film: rotates daily through the top trending titles. */
 function pickFeatured(movies) {
@@ -28,8 +29,11 @@ function Hero({ featured, moods, onSearch, busy }) {
       <div className="absolute inset-0 -z-10" aria-hidden="true">
         {featured?.backdrop && (
           <img
-            src={featured.backdrop.replace('/w780/', '/w1280/')}
+            {...backdropImage(featured.backdrop)}
             alt=""
+            // React 18 only passes the lowercase attribute through to the DOM
+            // eslint-disable-next-line react/no-unknown-property
+            fetchpriority="high"
             className="h-full w-full animate-fade-in object-cover object-[70%_20%] opacity-80 light:opacity-50"
           />
         )}

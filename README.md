@@ -3,11 +3,16 @@
 </p>
 
 <p align="center">
-  <strong>The right movie for how you feel — and what it's like outside.</strong><br />
-  AI-powered film recommendations from your mood that learn your taste and never repeat.
+  <strong>The right film for how you feel.</strong><br />
+  AI recommendations from your mood that learn your taste, never repeat, and show you where to watch.
 </p>
 
 <p align="center">
+  <a href="https://clinema.duckdns.org"><strong>Live demo →</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Matsadura/Clinema/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Matsadura/Clinema/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
   <img alt="Vite" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white" />
@@ -18,55 +23,84 @@
   <img alt="Groq" src="https://img.shields.io/badge/AI-Groq_·_GPT--OSS-F55036" />
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/home-dark.jpg" alt="Clinema home page: pick a mood, with this week's trending films" width="880" />
+</p>
+
 ---
 
 ## Overview
 
-Choosing a film is harder than watching one. **Clinema** asks how you want to feel and has an LLM curate a list
-of films that fit the moment. Every suggestion is matched against [TMDB](https://www.themoviedb.org/) for posters,
-ratings and synopses. As you like, save and dismiss films, Clinema learns your taste and personalises every list.
+Choosing a film is harder than watching one. **Clinema** asks how you want to feel and has an LLM curate
+films that fit the moment, each matched against [TMDB](https://www.themoviedb.org/) for posters, ratings,
+trailers, cast and streaming availability. As you like, save, dismiss and open films, Clinema learns your
+taste and personalises every list, and it never shows you the same film twice.
 
-Clinema started as a hackathon project and has since been hardened for production: secrets live server-side,
-external APIs have timeouts, caching and fallbacks, the UI handles every loading and failure state, and the whole
-stack ships as small, non-root Docker images with health checks.
+Clinema started as a hackathon project and has since been taken to production: it runs at
+**[clinema.duckdns.org](https://clinema.duckdns.org)** on a 1 GB arm64 VPS behind Caddy (automatic HTTPS),
+with CI-built images, nightly backups and uptime checks.
+
+| Recommendations | Film details |
+|---|---|
+| ![Twelve recommendations for "Reflective, Calm"](docs/screenshots/recommendations.jpg) | ![Detail drawer with trailer player and streaming providers](docs/screenshots/drawer.jpg) |
+| **Light theme** | **Mobile** |
+| ![The home page in the light theme](docs/screenshots/home-light.jpg) | <img src="docs/screenshots/mobile-home.jpg" alt="The home page on a phone" width="260" /> |
 
 ## Features
 
-- 🎭 **Mood matching:** pick up to six moods, from *Joyful* to *Reflective*.
-- 🤖 **AI curation with graceful degradation:** an open-weight model on Groq (GPT-OSS 120B by default) suggests titles. If the model is slow,
-  down or misconfigured, Clinema falls back to TMDB genre discovery, so users always get results.
-- 🎬 **Rich details:** posters, ratings, synopses, and a "Why this pick" explanation for every film.
-- 🔁 **Never the same list twice:** everything you've been shown, opened, liked, dismissed or saved is
-  excluded, both in the prompt and after generation. "Show different picks" always brings new films.
-- 🧠 **Learns your taste:** likes (+2), dislikes (−2), saves (+1) and opened details (+0.5) build a
-  time-decayed taste profile (genres, directors, themes, eras, languages, tone). It's injected into
-  every prompt and shown on your profile page.
-- ❤️ **Library:** likes, a watchlist, films you've seen and a "Not for me" list, with optimistic updates.
-- 🔎 **Search & discover:** search any film by title, browse this week's trending films, and see your
-  recommendation and viewing history grouped by day.
-- 🌗 **Dark and light themes:** a dark "cinema" theme by default and a warm light theme, both WCAG AA.
-- 🔐 **Accounts:** JWT auth, salted PBKDF2 password hashing, profile editing and account deletion.
-- 🔑 **Bring your own API keys:** signed-in users can plug in their own Groq and TMDB keys.
-  Keys are verified with the provider, encrypted at rest and never shown again. Anything a user doesn't
-  provide, or that the provider later rejects, falls back to the server's keys automatically.
-- 📱 **Responsive and accessible:** mobile-first layout, keyboard navigation, focus-managed dialogs,
+**Discover**
+- 🎭 **Mood matching:** pick up to six of 24 moods, from *Joyful* to *Reflective*.
+- 🤖 **AI curation that degrades gracefully:** an open-weight model on Groq (GPT-OSS 120B, falling back to
+  20B) suggests films in 2–6 seconds. If the AI is slow, rate-limited or down, Clinema switches models
+  instantly or falls back to TMDB discovery, so there are always results.
+- 🔁 **Never the same list twice:** everything you've been shown, opened, liked, dismissed, saved or seen
+  is excluded, both in the prompt and after generation.
+- 🔎 **Search, trending and history:** search any film, browse this week's trending films, and review your
+  activity grouped by day.
+
+**Decide**
+- ▶️ **Trailers in place:** play the trailer inside the film's details, without leaving the site
+  (privacy-enhanced YouTube, loaded only when you press play).
+- 📺 **Where to watch:** streaming, rental and purchase options for your country (from your browser's
+  locale), from JustWatch via TMDB.
+- 🎬 **Cast, crew and "More like this":** browse the cast, open any actor's or director's page with their
+  films, and hop to similar films in the same drawer.
+- 💬 **"Why this pick":** every AI suggestion explains how it fits your mood and your taste.
+
+**Keep**
+- 🧠 **Learns your taste:** likes (+2), dislikes (−2), saves (+1), seen (+0.5) and opened details (+0.5)
+  build a time-decayed profile (genres, directors, themes, eras, languages, tone) that steers every prompt.
+- ❤️ **Library:** likes, a watchlist, films you've seen and a "Not for me" list.
+- 🔗 **Shareable watchlists:** publish a read-only link to your watchlist (first name only) and revoke or
+  reset it at any time.
+- 🔐 **Accounts:** JWT auth, salted PBKDF2 hashing, password reset by email (single-use, one-hour links that
+  sign out every other session), profile editing and account deletion.
+- 🔑 **Bring your own API keys:** plug in your own Groq and TMDB keys; they're verified, encrypted at rest
+  and fall back to the server's keys automatically.
+
+**Everywhere**
+- 📱 **Installable app (PWA):** add Clinema to your home screen; the app shell works offline.
+- 🌗 **Dark and light themes**, both WCAG AA, with keyboard navigation, focus-managed dialogs and
   reduced-motion support.
-- ⚡ **Fast:** route-level code splitting, server-side TTL caches, parallel TMDB lookups, gzip and immutable
-  asset caching through Nginx.
+- ⚡ **Fast:** Lighthouse 100 for accessibility, best practices and SEO on mobile and desktop
+  (performance 96 mobile, 100 desktop), with self-hosted fonts, responsive TMDB images and code splitting.
 
 ## Architecture
 
-```text
-┌───────────────┐      ┌─────────────────────────┐      ┌──────────────────────┐
-│   Browser     │      │   web (nginx, :8080)    │      │  api (gunicorn/Flask)│
-│  React SPA    │─────▶│  static SPA + gzip      │─────▶│  /api/*  :5000       │
-└───────────────┘      │  /api → reverse proxy   │      │  JWT · rate limiting │
-                       └─────────────────────────┘      └──────────┬───────────┘
-                                                                   │
-                                      ┌────────────────────┼────────────────────┐
-                                      ▼                    ▼                    ▼
-                                  Groq LLM             TMDB API           MySQL 8.4 (db)
-                            (title suggestions)    (movie metadata)   users · library · taste
+```mermaid
+flowchart LR
+  user([Browser / installed PWA]) -->|HTTPS| caddy[Caddy<br/>TLS, HSTS]
+  subgraph vps [VPS · Docker Compose]
+    caddy --> web[web · nginx<br/>SPA, CSP, gzip]
+    web -->|/api| api[api · Flask + gunicorn<br/>JWT, rate limits]
+    api --> db[(MySQL 8.4<br/>users, library, taste)]
+    api --> redis[(Redis<br/>rate-limit counters)]
+  end
+  api -->|titles| groq[Groq LLM]
+  api -->|films, trailers, providers, cast| tmdb[TMDB API]
+  api -->|reset emails| smtp[SMTP provider]
+  ci[GitHub Actions] -.->|arm64 + amd64 images| ghcr[(GHCR)]
+  ghcr -.->|deploy/update.sh| vps
 ```
 
 **Recommendation pipeline** (`server/api/services/`):
@@ -82,8 +116,8 @@ stack ships as small, non-root Docker images with health checks.
    penalties; models that reject a parameter are retried without it. A circuit breaker and a model fallback
    list protect against outages.
 4. **Screen and resolve** (`recommender.py`): drop excluded titles (normalised), repeat directors and all but
-   one over-exposed staple. Resolve on TMDB in parallel and drop excluded TMDB ids. If too few remain, retry
-   once with the rejected titles excluded, then backfill from TMDB `discover`, preferring genres you like and
+   one over-exposed staple. Resolve on TMDB in parallel and drop excluded TMDB ids. If fewer than eight survive and time
+   allows, run one more round with the rejected titles excluded; otherwise backfill from TMDB `discover`, preferring genres you like and
    leaving out ones you dislike.
 5. **Learn:** shown films are logged as `recommended`. Likes, dislikes, saves and opened details are logged
    with weights, enriched with TMDB director and keywords, and folded into the profile straight away.
@@ -91,12 +125,15 @@ stack ships as small, non-root Docker images with health checks.
 | Directory | Contents |
 |---|---|
 | `client/` | React 18 SPA (Vite, Tailwind, React Router). `src/lib/api.js` is the single network layer. |
+| `client/e2e/` | Playwright end-to-end tests. |
 | `client/nginx.conf` | Production web server: SPA routing, `/api` proxy, caching, security headers. |
 | `server/api/` | Flask app factory, routes (`views/`) and external integrations (`services/`). |
 | `server/models/` | SQLAlchemy models and the storage engine. |
 | `server/migrations/` | Alembic migrations, applied automatically on startup. |
 | `server/tests/` | Pytest suite. External APIs are mocked, and the database is in-memory SQLite. |
-| `docker-compose.yml` | Production-style stack: `web`, `api` and `db`, with health checks. |
+| `e2e/fake_upstreams.py` | Deterministic fake TMDB and Groq used by the end-to-end stack. |
+| `deploy/` | Caddyfile, backup and update scripts for a VPS ([DEPLOY.md](DEPLOY.md)). |
+| `docker-compose*.yml` | Production stack (`web`, `api`, `db`, `redis`), plus dev and E2E overrides. |
 
 ## Getting started
 
@@ -118,7 +155,7 @@ Requires Docker with Compose v2.
 
 ```bash
 docker compose up -d --build
-docker compose ps          # wait until all three services are "healthy"
+docker compose ps          # wait until all services are "healthy"
 ```
 
 Open **http://localhost:8080**. Set `WEB_PORT` in `.env` to use a different port.
@@ -176,8 +213,11 @@ All configuration lives in a single root `.env` (see [`.env.example`](.env.examp
 | `JWT_EXPIRES_HOURS` | | Token lifetime (default `24`) |
 | `CORS_ORIGINS` | | Comma-separated origins. Only needed if the SPA is hosted on another domain. |
 | `DATABASE_URL` | | Full SQLAlchemy URL that overrides the `MYSQL_*` settings |
-| `RATELIMIT_STORAGE_URI` | | e.g. `redis://…` to share rate limits across workers or hosts |
-| `WEB_PORT` | | Host port for the web container (default `8080`) |
+| `RATELIMIT_STORAGE_URI` | | Rate-limit storage (compose uses its bundled Redis) |
+| `WEB_PORT`, `WEB_BIND` | | Host port and interface for the web container (default `0.0.0.0:8080`) |
+| `TRUSTED_PROXIES` | | Proxy hops in front of the API (default `1`; `2` behind Caddy) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_SECURITY`, `MAIL_FROM`, `APP_URL` | | Outgoing email for password reset (see [DEPLOY.md](DEPLOY.md)); unset disables it |
+| `API_IMAGE`, `WEB_IMAGE` | | Use CI-published images instead of building locally |
 
 ### Database migrations
 
@@ -194,11 +234,22 @@ alembic check                                         # verify models and migrat
 ## Testing and quality
 
 ```bash
-cd server && pytest              # API, services and pipeline tests (no network needed)
+cd server && pytest                       # 144 API, service and pipeline tests (no network needed)
 cd server && pycodestyle api models tests
-cd client && npm test            # Vitest + Testing Library
+cd client && npm test                     # 66 Vitest + Testing Library tests
 cd client && npm run lint && npm run build
 ```
+
+**End-to-end:** Playwright drives the real Docker stack (web, API, MySQL, Redis) with TMDB and Groq replaced
+by a local fake, so it needs no keys or network:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build --wait
+cd client && npx playwright install chromium && npm run test:e2e
+docker compose up -d --wait               # back to the normal stack afterwards
+```
+
+CI runs all of the above on every push and pull request, then publishes multi-arch images on `main`.
 
 ## API
 
@@ -217,6 +268,13 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
 | `GET` | `/api/<user_id>/taste` | Learned taste profile and its prompt summary |
 | `GET` | `/api/<user_id>/api-keys` | Which providers use the user's own key (masked) |
 | `PUT` / `DELETE` | `/api/<user_id>/api-keys/<provider>` | Verify and save, or remove, a user key (`groq`, `tmdb`) |
+| `GET` | `/api/movies/<id>/trailers` | YouTube trailers and teasers, best first |
+| `GET` | `/api/movies/<id>/extras?region=XX` | Where to watch, cast and similar films |
+| `GET` | `/api/people/<id>` | A cast or crew member and their films |
+| `GET` / `PUT` | `/api/<user_id>/watchlist/share` | Watchlist sharing status · `{enabled, rotate?}` |
+| `GET` | `/api/shared/<share_id>` | Public, read-only shared watchlist |
+| `POST` | `/api/password/forgot` · `/api/password/reset` | Email a reset link · set a new password |
+| `GET` | `/api/features` | Optional features this server has enabled |
 
 ## Bring-your-own API keys
 
@@ -229,19 +287,19 @@ The API is documented in [`server/api/README.md`](server/api/README.md). Key end
   fingerprint), so one user's key is never used for anyone else, and a broken key can't disable AI for others.
 - **Logs:** API keys are redacted from upstream error messages before logging.
 
-## Deployment notes
+## Deployment
 
-- **Single VM** (e.g. a small VPS or Lightsail): install Docker, copy the repo and `.env`, run
-  `docker compose up -d --build`, and put a TLS-terminating proxy (Caddy, Traefik or a cloud load balancer) in
-  front of port 8080.
+[DEPLOY.md](DEPLOY.md) is a step-by-step guide for a small VPS without a paid domain: firewall and swap,
+Docker, a free hostname (DuckDNS or sslip.io), automatic HTTPS with Caddy, password-reset email, nightly
+backups, uptime monitoring, and updates from prebuilt images (`deploy/update.sh`).
+
+Other options:
 - **Managed platforms:** the `server/` and `client/` Dockerfiles are independent, so they can run as two services
   on Render, Fly.io, Railway or Cloud Run with a managed MySQL. Set `DATABASE_URL`, and set `API_UPSTREAM` on the
   web service to the API's internal URL. Also set `NGINX_RESOLVER` to that platform's DNS resolver (the default,
   `127.0.0.11`, is Docker's embedded DNS).
-- Set `TRUSTED_PROXIES` to the number of proxies in front of the API so rate limiting sees real client IPs.
-  Compose sets it to `1` for the bundled Nginx.
-- Rate limits are stored in memory per Gunicorn worker by default. Use Redis (`RATELIMIT_STORAGE_URI`) when you
-  scale out.
+- Set `TRUSTED_PROXIES` to the number of proxies in front of the API so rate limiting sees real client IPs
+  (`1` for the bundled nginx, `2` behind Caddy).
 
 ## Authors
 
