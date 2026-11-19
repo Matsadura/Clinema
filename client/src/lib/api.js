@@ -95,6 +95,9 @@ export const api = {
   login: (email, password) => request('/login', { method: 'POST', body: { email, password } }),
   register: (payload) => request('/register', { method: 'POST', body: payload }),
   me: () => request('/auth_validate', { auth: true }),
+  features: () => request('/features'),
+  forgotPassword: (email) => request('/password/forgot', { method: 'POST', body: { email } }),
+  resetPassword: (token, password) => request('/password/reset', { method: 'POST', body: { token, password } }),
   updateProfile: (userId, payload) =>
     request(`/users/${encodeURIComponent(userId)}/profile`, { method: 'PUT', body: payload, auth: true }),
   deleteAccount: (userId) =>
@@ -116,8 +119,16 @@ export const api = {
 
   searchMovies: (query, opts) => request(`/movies/search?q=${encodeURIComponent(query)}`, opts),
   trending: (opts) => request('/movies/trending', opts),
+  movieExtras: (tmdbId, region, opts) =>
+    request(`/movies/${encodeURIComponent(tmdbId)}/extras?region=${encodeURIComponent(region)}`, opts),
+  person: (personId, opts) => request(`/people/${encodeURIComponent(personId)}`, opts),
   trailers: (tmdbId, opts) => request(`/movies/${encodeURIComponent(tmdbId)}/trailers`, opts),
   history: (userId, opts) => request(`/${encodeURIComponent(userId)}/history`, { auth: true, ...opts }),
+
+  watchlistShare: (userId, opts) => request(`/${encodeURIComponent(userId)}/watchlist/share`, { auth: true, ...opts }),
+  setWatchlistShare: (userId, body) =>
+    request(`/${encodeURIComponent(userId)}/watchlist/share`, { method: 'PUT', body, auth: true }),
+  sharedWatchlist: (shareId, opts) => request(`/shared/${encodeURIComponent(shareId)}`, opts),
 
   library: (userId, opts) => request(`/${encodeURIComponent(userId)}/library`, { auth: true, ...opts }),
   setLibraryFlags: (userId, tmdbId, flags) =>

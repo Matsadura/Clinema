@@ -32,11 +32,28 @@ services:
     networks:
       - backend
 
+  # Shared rate-limit counters for every API worker (nothing persisted)
+  redis:
+    <<: *hardening
+    image: redis:7.4.7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "32mb", "--maxmemory-policy", "volatile-ttl"]
+    read_only: true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
   api:
     <<: *hardening
     build:
       context: ./server
-    image: clinema-api:latest
+    # Prebuilt image from CI (API_IMAGE=ghcr.io/<owner>/clinema-api:latest)
+    # or the local build
+    image: ${API_IMAGE:-clinema-api:latest}
     # Explicit mapping (instead of env_file) so the API only receives what it
     # needs — e.g. never the MySQL root password.
     environment:
@@ -49,15 +66,25 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-}
       LLM_TIMEOUT: ${LLM_TIMEOUT:-20}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      RATELIMIT_STORAGE_URI: ${RATELIMIT_STORAGE_URI:-memory://}
+      RATELIMIT_STORAGE_URI: ${RATELIMIT_STORAGE_URI:-redis://redis:6379/0}
       DB_HOST: db
       MYSQL_DATABASE: ${MYSQL_DATABASE:-clinema}
       MYSQL_USER: ${MYSQL_USER:-clinema}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-1}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      # Password reset email (optional; unset SMTP_HOST disables it)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURITY: ${SMTP_SECURITY:-starttls}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_URL: ${APP_URL:-}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     read_only: true
     tmpfs:
@@ -70,7 +97,7 @@ services:
     <<: *hardening
     build:
       context: ./client
-    image: clinema-web:latest
+    image: ${WEB_IMAGE:-clinema-web:latest}
     environment:
       API_UPSTREAM: http://api:5000
     ports:

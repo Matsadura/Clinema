@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "1.64.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.10",
@@ -37,7 +39,7 @@
     "vite": "^7.3.8",
     "vitest": "^4.1.12"
   },
-  "description": "Clinema — AI movie recommendations from your mood, tuned to your taste",
+  "description": "Clinema \u2014 AI movie recommendations from your mood, tuned to your taste",
   "engines": {
     "node": ">=20.19"
   }

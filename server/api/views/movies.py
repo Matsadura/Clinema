@@ -8,6 +8,8 @@ Routes:
     - POST /movies             Cache a movie (auth required)
     - GET  /movies/<tmdb_id>   Get one movie by TMDB id
     - GET  /movies/<tmdb_id>/trailers  YouTube trailers for a movie
+    - GET  /movies/<tmdb_id>/extras    Where to watch, cast, similar films
+    - GET  /people/<person_id>         A person and their films
 """
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required
@@ -112,3 +114,35 @@ def movie_trailers(tmdb_id):
     if found is None:
         return error('Trailers are unavailable right now', 502)
     return jsonify(found)
+
+
+@app_views.route('/movies/<int:tmdb_id>/extras', methods=['GET'])
+@limiter.limit("60 per minute")
+def movie_extras(tmdb_id):
+    """Where to watch in ?region=XX (ISO 3166-1, default US), the top
+    cast and similar films."""
+    region = tmdb.valid_region(request.args.get('region') or 'US')
+    if not region:
+        return error('region must be a two-letter country code')
+    keys = request_keys()["tmdb"]
+    if not keys:
+        return error('Movie database is not configured', 503)
+    data = tmdb.extras(tmdb_id, region, keys)
+    if data is None:
+        return error('Details are unavailable right now', 502)
+    upsert_movies(data["similar"])
+    return jsonify(data)
+
+
+@app_views.route('/people/<int:person_id>', methods=['GET'])
+@limiter.limit("60 per minute")
+def get_person(person_id):
+    """A cast or crew member and their best-known films."""
+    keys = request_keys()["tmdb"]
+    if not keys:
+        return error('Movie database is not configured', 503)
+    data = tmdb.person(person_id, keys)
+    if data is None:
+        return error('Person not found', 404)
+    upsert_movies(data["movies"])
+    return jsonify(data)

@@ -48,11 +48,82 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  docker:
-    name: Docker · build images
+  e2e:
+    name: E2E · Playwright on the Docker stack
     runs-on: ubuntu-latest
     needs: [api, web]
+    timeout-minutes: 20
+    env:
+      # Throwaway values: TMDB and Groq are replaced by e2e/fake_upstreams.py
+      APP_ENV: production
+      JWT_SECRET_KEY: e2e-jwt-secret-that-is-at-least-32-characters
+      MYSQL_PASSWORD: e2e-db-password
+      MYSQL_ROOT_PASSWORD: e2e-db-root-password
+      TMDB_API_KEY: e2e-fake-key
+      COMPOSE_FILE: docker-compose.yml:docker-compose.e2e.yml
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t clinema-api ./server
-      - run: docker build -t clinema-web ./client
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      - run: npx playwright install --with-deps chromium
+        working-directory: client
+      - name: Start the stack
+        run: docker compose up -d --build --wait
+      - run: npx playwright test
+        working-directory: client
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: client/playwright-report
+          retention-days: 7
+
+  docker:
+    name: Docker · build${{ github.event_name == 'push' && ' & publish' || '' }} images
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: [api, web]
+    env:
+      # On main: multi-arch images pushed to GHCR (the VPS is arm64).
+      # On pull requests: an amd64 build only, nothing pushed.
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        if: env.PUBLISH == 'true'
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: env.PUBLISH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/clinema-${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image == 'api' && './server' || './client' }}
+          platforms: ${{ env.PUBLISH == 'true' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

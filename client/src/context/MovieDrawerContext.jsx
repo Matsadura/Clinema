@@ -48,6 +48,7 @@ export function MovieDrawerProvider({ children }) {
       <MovieDetails
         movie={movie}
         onClose={() => setMovie(null)}
+        onOpen={open}
         liked={!!entry.like}
         saved={!!entry.save}
         disliked={!!entry.dislike}

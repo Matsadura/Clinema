@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 import { FiBookmark, FiCheck, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import { Skeleton } from './ui.jsx';
+import { posterImage } from '../lib/images.js';
 
 /** Typographic fallback when a poster is missing: no stock icon. */
 export function PosterFallback({ title, year }) {
@@ -50,7 +51,7 @@ function MovieCard({ movie, liked = false, saved = false, disliked = false, seen
         >
           {poster && !imageFailed ? (
             <img
-              src={poster}
+              {...posterImage(poster)}
               alt=""
               loading="lazy"
               decoding="async"

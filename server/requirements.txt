@@ -12,4 +12,5 @@ python-dotenv==1.2.4
 requests==2.34.2
 groq==1.7.0
 cachetools==7.3.1
+redis==7.4.0
 gunicorn==27.0.1

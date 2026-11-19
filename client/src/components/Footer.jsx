@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <p>
           &copy; {new Date().getFullYear()} Clinema. Film data from{' '}
-          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="text-muted underline-offset-4 hover:text-ink hover:underline">
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="text-muted underline decoration-line/30 underline-offset-4 hover:text-ink hover:decoration-current">
             TMDB
           </a>
           ; not endorsed or certified by TMDB.

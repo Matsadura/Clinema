@@ -80,6 +80,25 @@ describe('App shell', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
+  it('opens a similar film in the same drawer without React errors', async () => {
+    const u = userEvent.setup();
+    const ronin = { tmdb_id: 22, title: 'Ronin', year: 1998, poster: null };
+    const extras = (similar) => ({ providers: { region: 'US', link: null, stream: [], rent: [], buy: [] }, cast: [], similar });
+    routeFetch({
+      '/api/movies/search': [stalker],
+      '/api/movies/3/extras': extras([ronin]),
+      '/api/movies/22/extras': extras([]),
+    });
+    const spy = vi.spyOn(console, 'error');
+    renderApp();
+    await u.type(screen.getAllByRole('combobox')[0], 'stalker');
+    await u.click(await screen.findByRole('option', { name: /Stalker/ }));
+    await u.click(await screen.findByRole('button', { name: 'Ronin (1998)' }));
+    expect(await screen.findByRole('dialog', { name: 'Ronin' })).toBeInTheDocument();
+    expect(spy.mock.calls.filter(([msg]) => /same key|must not return/.test(String(msg)))).toEqual([]);
+    spy.mockRestore();
+  });
+
   it('tells you when a search finds nothing', async () => {
     const u = userEvent.setup();
     routeFetch({ '/api/movies/search': [] });

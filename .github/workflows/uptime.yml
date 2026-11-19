@@ -1,0 +1,26 @@
+name: Uptime
+
+# Checks the live site every 30 minutes. A failed run emails the repository
+# owner (GitHub's default notification for failed scheduled workflows).
+# Set the repository variable HEALTHCHECK_URL to point it elsewhere.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: API and database are healthy
+        env:
+          URL: ${{ vars.HEALTHCHECK_URL || 'https://clinema.duckdns.org' }}
+        run: |
+          for attempt in 1 2 3; do
+            body=$(curl -fsS -m 20 "$URL/api/health") && echo "$body" | grep -q '"database":"up"' && { echo "$body"; exit 0; }
+            echo "attempt $attempt failed: ${body:-no response}"; sleep 30
+          done
+          echo "::error::$URL is down"; exit 1

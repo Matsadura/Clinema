@@ -28,6 +28,8 @@ class User(BaseModel, Base):
     first_name = Column(String(128), nullable=False)
     last_name = Column(String(128), nullable=False)
     avatar = Column(String(256), nullable=True)
+    # Unguessable id for the public, read-only watchlist link (None = private)
+    watchlist_share_id = Column(String(32), nullable=True, unique=True)
     user_movies = relationship("User_Movie",
                                back_populates="user",
                                cascade="all, delete-orphan")

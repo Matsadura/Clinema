@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { FiBookmark, FiCheck, FiExternalLink, FiHeart, FiThumbsDown } from 'react-icons/fi';
 import Modal from './Modal.jsx';
 import { PosterFallback, Rating } from './MovieCard.jsx';
 import TrailerPlayer from './TrailerPlayer.jsx';
+import MovieExtras from './MovieExtras.jsx';
 
 const LANGUAGES = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], { type: 'language' }) : null;
 
@@ -22,7 +24,12 @@ const ACTIONS = [
 ];
 
 /** Focused detail drawer: everything the card leaves out. */
-export default function MovieDetails({ movie, onClose, liked, saved, disliked, seen, onToggle }) {
+export default function MovieDetails({ movie, onClose, onOpen, liked, saved, disliked, seen, onToggle }) {
+  const top = useRef(null);
+  // Opening a similar film reuses the drawer: start it from the top
+  useEffect(() => {
+    top.current?.scrollIntoView?.({ block: 'start' });
+  }, [movie?.tmdb_id]);
   if (!movie) return null;
   const { title, poster, backdrop, year, rating, description, language, tmdb_id: tmdbId, why, fit, tone, director } = movie;
   const genres = Array.isArray(movie.genres) ? movie.genres.slice(0, 3) : [];
@@ -31,7 +38,7 @@ export default function MovieDetails({ movie, onClose, liked, saved, disliked, s
 
   return (
     <Modal open={!!movie} onClose={onClose} title={title} variant="drawer" hideTitle>
-      <div className="sm:flex-1">
+      <div ref={top} className="sm:flex-1">
         {backdrop && (
           <div className="relative h-40 overflow-hidden sm:h-52">
             <img src={backdrop} alt="" className="h-full w-full object-cover opacity-50" loading="lazy" />
@@ -56,7 +63,7 @@ export default function MovieDetails({ movie, onClose, liked, saved, disliked, s
             </div>
           </div>
 
-          {tmdbId && <TrailerPlayer key={tmdbId} tmdbId={tmdbId} title={title} backdrop={backdrop} />}
+          {tmdbId && <TrailerPlayer key={`trailer-${tmdbId}`} tmdbId={tmdbId} title={title} backdrop={backdrop} />}
 
           {(genres.length > 0 || tone) && (
             <p className="mt-6 text-sm text-subtle">
@@ -75,6 +82,8 @@ export default function MovieDetails({ movie, onClose, liked, saved, disliked, s
           )}
 
           <p className="mt-6 max-w-prose leading-relaxed text-muted">{description || 'No synopsis available yet.'}</p>
+
+          {tmdbId && <MovieExtras key={`extras-${tmdbId}`} tmdbId={tmdbId} onOpen={onOpen} onNavigate={onClose} />}
 
           {tmdbId && (
             <a

@@ -11,3 +11,5 @@ from api.views.movies_suggestions import *  # noqa: E402,F401,F403
 from api.views.users import *  # noqa: E402,F401,F403
 from api.views.user_movies import *  # noqa: E402,F401,F403
 from api.views.api_keys import *  # noqa: E402,F401,F403
+from api.views.shares import *  # noqa: E402,F401,F403
+from api.views.password_reset import *  # noqa: E402,F401,F403
