@@ -51,7 +51,7 @@ with CI-built images, nightly backups and uptime checks.
 **Discover**
 - 🎭 **Mood matching:** pick up to six of 24 moods, from *Joyful* to *Reflective*.
 - 🤖 **AI curation that degrades gracefully:** an open-weight model on Groq (GPT-OSS 120B, falling back to
-  20B) suggests films in 2–6 seconds. If the AI is slow, rate-limited or down, Clinema switches models
+  20B) suggests films in a single model call in the common case. If the AI is slow, rate-limited or down, Clinema switches models
   instantly or falls back to TMDB discovery, so there are always results.
 - 🔁 **Never the same list twice:** everything you've been shown, opened, liked, dismissed, saved or seen
   is excluded, both in the prompt and after generation.
