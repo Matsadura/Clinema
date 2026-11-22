@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Holds class Movie (a local cache of TMDB metadata)."""
 from sqlalchemy import Boolean, Column, Float, Integer, String
+from sqlalchemy.exc import IntegrityError
 
 from models.base_model import Base, BaseModel
 
@@ -53,10 +54,6 @@ class Movie(BaseModel, Base):
     countries = Column(String(128), nullable=True)
     tones = Column(String(256), nullable=True)
 
-    FIELDS = ('tmdb_id', 'title', 'description', 'poster', 'adult',
-              'popularity', 'year', 'rating', 'language', 'genres',
-              'director', 'keywords', 'countries', 'tones')
-
     def set_features(self, data, overwrite=False):
         """Fill taste features from a movie dict (lists or strings)."""
         changed = False
@@ -83,3 +80,44 @@ class Movie(BaseModel, Base):
         for field in LIST_FIELDS:
             data[field] = split_list(data.get(field))
         return data
+
+
+BASE_FIELDS = ('tmdb_id', 'title', 'description', 'poster', 'adult',
+               'popularity', 'year', 'rating', 'language')
+
+
+def upsert_movies(movies):
+    """Store TMDB movies locally (needed for the library, history and taste
+    learning), filling in missing taste features on existing rows.
+
+    Each new film is inserted in its own savepoint: when two requests race
+    to insert the same film, only that row is skipped (the other request
+    stored it) instead of rolling back the whole batch.
+    """
+    from models import storage  # the storage module imports this one
+    if not movies:
+        return
+    ids = [m["tmdb_id"] for m in movies]
+    existing = {m.tmdb_id: m for m in storage.session.query(Movie)
+                .filter(Movie.tmdb_id.in_(ids))}
+    for data in movies:
+        features = {**data, "tones": [data["tone"]] if data.get("tone")
+                    else None}
+        movie = existing.get(data["tmdb_id"])
+        if movie is not None:
+            movie.set_features(features)
+            continue
+        fields = {k: data.get(k) for k in BASE_FIELDS}
+        fields["title"] = (fields["title"] or "")[:128]
+        movie = Movie(**fields)
+        movie.set_features(features)
+        try:
+            with storage.session.begin_nested():
+                storage.new(movie)
+        except IntegrityError:
+            continue  # inserted concurrently by another request
+        existing[data["tmdb_id"]] = movie
+    try:
+        storage.save()
+    except IntegrityError:
+        storage.rollback()

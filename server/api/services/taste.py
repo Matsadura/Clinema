@@ -18,7 +18,7 @@ from api.services import tmdb
 from models import storage
 from models.base_model import utcnow
 from models.interaction import EVENT_WEIGHTS, Interaction, TasteProfile
-from models.movie import Movie
+from models.movie import Movie, upsert_movies
 from models.user_movie import User_Movie
 
 log = logging.getLogger(__name__)
@@ -65,26 +65,14 @@ def record_recommendations(user_id, movies, context=None):
 def ensure_features(tmdb_ids, api_key):
     """Make sure the given movies exist locally with taste features
     (genres, director, keywords...). Fetches TMDB details when missing."""
-    if not tmdb_ids:
+    if not tmdb_ids or not api_key:
         return
     rows = {m.tmdb_id: m for m in storage.session.query(Movie).filter(
         Movie.tmdb_id.in_(list(tmdb_ids)))}
-    for tmdb_id in tmdb_ids:
-        movie = rows.get(tmdb_id)
-        if movie is not None and movie.genres and movie.director:
-            continue
-        data = tmdb.details(tmdb_id, api_key) if api_key else None
-        if not data:
-            continue
-        if movie is None:
-            fields = {k: data.get(k) for k in
-                      ('tmdb_id', 'title', 'description', 'poster', 'adult',
-                       'popularity', 'year', 'rating', 'language')}
-            fields['title'] = (fields['title'] or '')[:128]
-            movie = Movie(**fields)
-            storage.new(movie)
-            rows[tmdb_id] = movie
-        movie.set_features(data)
+    missing = [i for i in tmdb_ids
+               if not (rows.get(i) and rows[i].genres and rows[i].director)]
+    upsert_movies([d for d in (tmdb.details(i, api_key) for i in missing)
+                   if d])
 
 
 # -- aggregation -------------------------------------------------------------

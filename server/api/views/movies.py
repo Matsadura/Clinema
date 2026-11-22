@@ -13,7 +13,8 @@ from flask import jsonify, request
 from api.extensions import limiter
 from api.services import tmdb
 from api.views import app_views
-from api.views.helpers import error, request_keys, upsert_movies
+from api.views.helpers import error, request_keys
+from models.movie import upsert_movies
 
 
 @app_views.route('/movies/search', methods=['GET'])

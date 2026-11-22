@@ -114,7 +114,7 @@ def test_history_is_private(client):
 def test_concurrent_duplicate_does_not_drop_the_batch(app, monkeypatch):
     """Regression: a film inserted by a racing request used to roll back
     every other film in the batch."""
-    from api.views import helpers
+    from models import movie as movie_model
     from models.movie import Movie
 
     with app.test_request_context():
@@ -132,7 +132,7 @@ def test_concurrent_duplicate_does_not_drop_the_batch(app, monkeypatch):
 
         monkeypatch.setattr(storage.session, "query",
                             lambda *a, **k: Blind(real_query(*a, **k)))
-        helpers.upsert_movies([
+        movie_model.upsert_movies([
             {"tmdb_id": 1, "title": "Already there"},
             {"tmdb_id": 2, "title": "New A"},
             {"tmdb_id": 3, "title": "New B"},

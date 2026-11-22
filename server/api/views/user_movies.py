@@ -19,9 +19,10 @@ from sqlalchemy.exc import IntegrityError
 from api.services import taste, tmdb
 from api.views import app_views
 from api.views.helpers import (error, json_body, movies_by_tmdb_id,
-                               owner_required, request_keys, upsert_movies)
+                               owner_required, request_keys)
 from models import storage
 from models.interaction import Interaction
+from models.movie import upsert_movies
 from models.user_movie import User_Movie
 
 FLAGS = ('like', 'save', 'dislike', 'seen')

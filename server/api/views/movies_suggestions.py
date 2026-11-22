@@ -9,8 +9,9 @@ from api.services import taste
 from api.services.recommender import parse_moods, recommend
 from api.views import app_views
 from api.views.helpers import (error, json_body, optional_user,
-                               request_keys, upsert_movies)
+                               request_keys)
 from models import storage
+from models.movie import upsert_movies
 
 SUGGESTION_LIMIT = "20 per minute; 200 per day"
 MAX_SEEN_IDS = 300
