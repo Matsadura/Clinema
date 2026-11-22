@@ -97,6 +97,14 @@ def tmdb_movie(id_, title, year=2000, poster="/p.jpg", **extra):
     return movie
 
 
+def cached_title(app, tmdb_id):
+    """Title of the locally cached movie, or None."""
+    from models.movie import Movie
+    with app.app_context():
+        movie = storage.get_specific(Movie, "tmdb_id", tmdb_id)
+        return movie.title if movie else None
+
+
 def register_and_login(client, email="ada@example.com",
                        password="password123"):
     client.post("/api/register", json={

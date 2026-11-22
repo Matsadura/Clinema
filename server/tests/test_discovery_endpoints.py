@@ -3,13 +3,14 @@ import json
 
 from models import storage
 from models.interaction import Interaction
-from tests.conftest import TMDB_SEARCH, register_and_login, tmdb_movie
+from tests.conftest import (TMDB_SEARCH, cached_title, register_and_login,
+                            tmdb_movie)
 
 TMDB_TRENDING = "https://api.themoviedb.org/3/trending/movie/week"
 
 
 # -- search --------------------------------------------------------------
-def test_search_returns_poster_results_by_popularity(client, mocked):
+def test_search_returns_poster_results_by_popularity(app, client, mocked):
     mocked.get(TMDB_SEARCH, json={"results": [
         tmdb_movie(1, "Heat", 1995, popularity=10),
         tmdb_movie(2, "Heat 2", 2026, popularity=90),
@@ -20,7 +21,7 @@ def test_search_returns_poster_results_by_popularity(client, mocked):
     assert [m["title"] for m in res.get_json()] == ["Heat 2", "Heat"]
     assert mocked.calls[0].request.params["query"] == "heat"
     # Results are cached locally so the library can show them later
-    assert client.get("/api/movies/2").get_json()["title"] == "Heat 2"
+    assert cached_title(app, 2) == "Heat 2"
 
 
 def test_search_validation_and_caching(client, mocked):
@@ -231,7 +232,7 @@ def _extras_body(**over):
     return body
 
 
-def test_extras_for_region(client, mocked):
+def test_extras_for_region(app, client, mocked):
     mocked.get(TMDB_MOVIE_7, json=_extras_body())
     res = client.get("/api/movies/7/extras?region=ma")
     assert res.status_code == 200
@@ -250,7 +251,7 @@ def test_extras_for_region(client, mocked):
     params = mocked.calls[0].request.params
     assert "watch/providers" in params["append_to_response"]
     # Similar films are cached locally for the library
-    assert client.get("/api/movies/22").get_json()["title"] == "Ronin"
+    assert cached_title(app, 22) == "Ronin"
 
 
 def test_extras_unsafe_link_and_missing_region(client, mocked):

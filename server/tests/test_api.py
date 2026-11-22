@@ -3,7 +3,8 @@ import json
 
 import responses
 
-from tests.conftest import TMDB_DISCOVER, TMDB_SEARCH, tmdb_movie
+from tests.conftest import (TMDB_DISCOVER, TMDB_SEARCH, cached_title,
+                            register_and_login, tmdb_movie)
 
 
 def mock_tmdb_search(mocked, titles):
@@ -39,7 +40,7 @@ def test_debug_route_removed(client):
 
 
 # -- suggestions -------------------------------------------------------------
-def test_suggestions_by_mood(client, mocked, fake_llm):
+def test_suggestions_by_mood(app, client, mocked, fake_llm):
     titles = ["Still Walking", "Paterson", "Up", "Big"]
     fake_llm.content = json.dumps(titles)
     mock_tmdb_search(mocked, titles)
@@ -57,7 +58,7 @@ def test_suggestions_by_mood(client, mocked, fake_llm):
     assert "Calm" in prompt and "weather" not in prompt.lower()
 
     # Suggested movies are cached locally for the library
-    assert client.get("/api/movies/1").get_json()["title"] == "Still Walking"
+    assert cached_title(app, 1) == "Still Walking"
 
 
 def test_location_is_ignored_and_never_fetched(client, mocked, fake_llm):
@@ -102,18 +103,13 @@ def test_suggestions_validation(client):
                        json={}).status_code == 400
 
 
-# -- movies --------------------------------------------------------------
-def test_movies_crud(client, mocked):
-    from tests.conftest import register_and_login
+# -- removed routes ------------------------------------------------------
+def test_movie_cache_cannot_be_written_or_listed(client):
+    """Any user could plant fake titles through POST /movies; the cache is
+    now only filled from TMDB."""
     _, headers = register_and_login(client)
-    body = {"title": "Heat", "tmdb_id": 949, "rating": 7.9}
-    assert client.post("/api/movies", json=body).status_code == 401
+    body = {"title": "Fake", "tmdb_id": 949}
     assert client.post("/api/movies", json=body,
-                       headers=headers).status_code == 201
-    assert client.post("/api/movies", json=body,
-                       headers=headers).status_code == 409
-    assert client.get("/api/movies").get_json()[0]["title"] == "Heat"
-    assert client.get("/api/movies?limit=abc").status_code == 400
-
-    mocked.get("https://api.themoviedb.org/3/movie/12345", status=404)
-    assert client.get("/api/movies/12345").status_code == 404
+                       headers=headers).status_code in (404, 405)
+    assert client.get("/api/movies").status_code == 404
+    assert client.get("/api/movies/949").status_code == 404
