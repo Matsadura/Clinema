@@ -113,6 +113,19 @@ def test_forgot_validation_and_unconfigured_server(client, outbox, app):
         {"password_reset": False}
 
 
+def test_reset_link_ignores_a_forged_host(client, outbox, app):
+    register_and_login(client)
+    client.post("/api/password/forgot", json={"email": "ada@example.com"},
+                headers={"Host": "evil.example"})
+    assert _link(outbox[0]).startswith("https://clinema.example.org/")
+
+    # Without APP_URL there is no safe base for links: reset stays off
+    app.config["APP_URL"] = ""
+    assert client.post("/api/password/forgot",
+                       json={"email": "ada@example.com"}).status_code == 503
+    assert len(outbox) == 1
+
+
 def test_tokens_without_password_claim_still_work(client, app):
     """Sessions issued before this feature keep working."""
     from flask_jwt_extended import create_access_token

@@ -17,7 +17,9 @@ TIMEOUT = 15
 
 
 def configured(config):
-    return bool(config.get("SMTP_HOST") and config.get("MAIL_FROM"))
+    """Email needs a server, a sender and the public URL for links."""
+    return bool(config.get("SMTP_HOST") and config.get("MAIL_FROM")
+                and config.get("APP_URL"))
 
 
 def build_message(config, to, subject, text, html=None):

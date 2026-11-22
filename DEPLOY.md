@@ -61,7 +61,7 @@ With DuckDNS, keep the IP current with a cron entry (only needed if the IP can c
 
 ## Email (password reset)
 
-"Forgot password?" appears only once SMTP is configured. Any provider works;
+"Forgot password?" appears only once SMTP and `APP_URL` are set. Any provider works;
 [Brevo](https://www.brevo.com) has a free tier (300 emails/day) and lets you
 send from a verified single address, so no domain is needed. Add to `.env`:
 

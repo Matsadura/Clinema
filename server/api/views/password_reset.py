@@ -13,7 +13,7 @@ every existing session (see api.extensions).
 import hashlib
 import html
 
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify
 from itsdangerous import BadSignature, SignatureExpired, \
     URLSafeTimedSerializer
 
@@ -61,8 +61,9 @@ def _user_for(token):
 
 
 def _reset_link(token):
-    base = current_app.config.get("APP_URL") or request.url_root.rstrip("/")
-    return f"{base}/reset-password?token={token}"
+    # Never built from the request's Host header: a forged Host would send
+    # the victim a real email linking to the attacker's site
+    return f"{current_app.config['APP_URL']}/reset-password?token={token}"
 
 
 def _email(user, link):
