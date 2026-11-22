@@ -109,3 +109,24 @@ export function Field({ label, id, ...props }) {
     </div>
   );
 }
+
+/** On/off switch row: a label (and optional icon) with a sliding toggle. */
+export function Switch({ checked, onChange, children, disabled = false, className = 'text-muted hover:text-ink' }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`flex w-full items-center justify-between gap-3 rounded-md border border-line/[0.08] px-3 py-2.5 text-sm transition-colors disabled:opacity-60 ${className}`}
+    >
+      <span className="flex items-center gap-3">{children}</span>
+      <span className={`relative block h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-line/20'}`} aria-hidden="true">
+        <span
+          className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-canvas shadow transition-transform duration-200 ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
+        />
+      </span>
+    </button>
+  );
+}

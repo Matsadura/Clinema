@@ -3,7 +3,7 @@ import { FiCheck, FiCopy, FiShare2 } from 'react-icons/fi';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Modal from './Modal.jsx';
-import { Alert, Button, Spinner } from './ui.jsx';
+import { Alert, Button, Spinner, Switch } from './ui.jsx';
 
 const shareUrl = (shareId) => `${window.location.origin}/w/${shareId}`;
 
@@ -62,21 +62,9 @@ export default function ShareWatchlist() {
           {!share && !error && <Spinner label="Loading sharing settings" />}
           {share && (
             <>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={share.enabled}
-                disabled={busy}
-                onClick={() => update({ enabled: !share.enabled })}
-                className="flex w-full items-center justify-between gap-3 rounded-md border border-line/[0.08] px-3 py-2.5 text-sm text-ink disabled:opacity-60"
-              >
+              <Switch checked={share.enabled} disabled={busy} onChange={(enabled) => update({ enabled })} className="text-ink">
                 Public link
-                <span className={`relative block h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${share.enabled ? 'bg-accent' : 'bg-line/20'}`} aria-hidden="true">
-                  <span
-                    className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-canvas shadow transition-transform duration-200 ${share.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-                  />
-                </span>
-              </button>
+              </Switch>
               {share.enabled && (
                 <div className="space-y-3">
                   <div className="flex gap-2">

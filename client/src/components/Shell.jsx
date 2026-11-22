@@ -6,6 +6,7 @@ import logoDark from '../images/brand-logo-dark.svg';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import SearchBox from './SearchBox.jsx';
+import { Switch } from './ui.jsx';
 import { useInstallPrompt, useOffline } from '../lib/pwa.js';
 
 export function Avatar({ user, size = 'h-9 w-9 text-xs' }) {
@@ -69,20 +70,9 @@ export function ThemeSwitch() {
   const { theme, toggle } = useTheme();
   const dark = theme === 'dark';
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={dark}
-      onClick={toggle}
-      className="flex w-full items-center justify-between gap-3 rounded-md border border-line/[0.08] px-3 py-2.5 text-sm text-muted transition-colors hover:text-ink"
-    >
-      <span className="flex items-center gap-3">
-        <FiMoon className="h-4 w-4" aria-hidden="true" /> Dark mode
-      </span>
-      <span className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${dark ? 'bg-accent' : 'bg-line/20'}`} aria-hidden="true">
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-canvas shadow transition-transform duration-200 ${dark ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-      </span>
-    </button>
+    <Switch checked={dark} onChange={toggle}>
+      <FiMoon className="h-4 w-4" aria-hidden="true" /> Dark mode
+    </Switch>
   );
 }
 
