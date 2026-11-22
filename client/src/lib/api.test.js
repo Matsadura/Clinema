@@ -73,6 +73,6 @@ describe('request', () => {
   it('builds the suggestions payload', async () => {
     fetch.mockResolvedValue(jsonResponse({ movies: [] }));
     await api.suggestions({ moods: ['Calm'], seenIds: [7, 8] });
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ moods: ['Calm'], seen_ids: [7, 8] });
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ moods: ['Calm'], kind: 'movie', seen_ids: [7, 8] });
   });
 });

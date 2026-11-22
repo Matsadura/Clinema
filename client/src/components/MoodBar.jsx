@@ -32,7 +32,7 @@ function MoodChip({ mood, active, disabled, onToggle }) {
  * a selection readout and submit. `value` is the mood set currently shown
  * in the results; the bar keeps a draft until the user submits.
  */
-export default function MoodBar({ value = [], onSubmit, busy = false }) {
+export default function MoodBar({ value = [], onSubmit, busy = false, noun = 'films' }) {
   const [draft, setDraft] = useState(value);
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState('');
@@ -68,7 +68,7 @@ export default function MoodBar({ value = [], onSubmit, busy = false }) {
   );
 
   return (
-    <form onSubmit={submit} role="search" aria-label="Find films by mood">
+    <form onSubmit={submit} role="search" aria-label={`Find ${noun} by mood`}>
       <div
         role="group"
         aria-label="Moods"
@@ -99,7 +99,7 @@ export default function MoodBar({ value = [], onSubmit, busy = false }) {
 
       <div className="mt-5 flex flex-wrap items-center gap-4">
         <Button type="submit" size="lg" disabled={!draft.length || unchanged} loading={busy && unchanged}>
-          Find films
+          Find {noun}
         </Button>
         <span className="num text-sm text-subtle" aria-live="polite">
           {draft.length}/{MAX_MOODS}

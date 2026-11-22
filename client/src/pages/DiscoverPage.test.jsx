@@ -47,7 +47,7 @@ describe('Home', () => {
     renderAt('/');
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Find your next favourite film.');
-    const shelf = await screen.findByRole('region', { name: 'Trending this week' });
+    const shelf = await screen.findByRole('region', { name: 'Trending films' });
     expect(within(shelf).getByText('The Odyssey')).toBeInTheDocument();
     expect(screen.getByText('Featured tonight')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Recommendations' })).not.toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('Home', () => {
     const recs = await screen.findByRole('region', { name: 'Recommendations' });
     expect(await within(recs).findByText('Amélie')).toBeInTheDocument();
     expect(within(recs).getByText('2 films for Calm')).toBeInTheDocument();
-    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[0][1].body)).toEqual({ moods: ['Calm'] });
+    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[0][1].body)).toEqual({ moods: ['Calm'], kind: 'movie' });
   });
 
   it('searches by mood from the hero without leaving the page', async () => {
@@ -117,7 +117,7 @@ describe('Home', () => {
     await screen.findByText('Amélie');
     await user.click(screen.getByRole('button', { name: /Different picks/ }));
     expect(await screen.findByText('Stalker')).toBeInTheDocument();
-    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[1][1].body)).toEqual({ moods: ['Calm'], seen_ids: [1, 2] });
+    expect(JSON.parse(callsTo(fetch, '/api/suggestions')[1][1].body)).toEqual({ moods: ['Calm'], kind: 'movie', seen_ids: [1, 2] });
   });
 
   it('opens the shared detail drawer with the reasoning and four actions', async () => {
@@ -137,7 +137,7 @@ describe('Home', () => {
 
   it('sends signed-out visitors to sign in when they act on a film', async () => {
     const user = userEvent.setup();
-    routeFetch({ '/api/movies/trending': trending });
+    routeFetch({ '/api/movies/trending': trending, '/api/movies/trending?kind=tv': [] });
     renderAt('/');
     await user.click(await screen.findByRole('button', { name: 'The Odyssey (2026), view details' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Seen' }));
@@ -145,5 +145,24 @@ describe('Home', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/auth');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('switches to series: same moods, kind sent, and a series trending shelf', async () => {
+    const user = userEvent.setup();
+    const show = { tmdb_id: -1399, kind: 'tv', title: 'Slow Horses', year: 2022, poster: 'https://image.tmdb.org/s.jpg', backdrop: 'https://image.tmdb.org/b.jpg' };
+    const fetch = routeFetch({
+      '/api/movies/trending': trending,
+      '/api/movies/trending?kind=tv': [show],
+      '/api/suggestions': { movies: [show], source: 'ai', moods: ['Calm'], kind: 'tv' },
+    });
+    renderAt('/?moods=Calm');
+    const series = await screen.findByRole('region', { name: 'Trending series' });
+    expect(within(series).getByText('Slow Horses')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Series' }));
+    expect(screen.getByRole('button', { name: 'Series' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByText(/1 series for Calm/)).toBeInTheDocument();
+    expect(JSON.parse(callsTo(fetch, '/api/suggestions').at(-1)[1].body)).toMatchObject({ moods: ['Calm'], kind: 'tv' });
+    expect(screen.getByTestId('where')).toHaveTextContent('type=series');
   });
 });

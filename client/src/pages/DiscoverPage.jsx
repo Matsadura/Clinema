@@ -21,7 +21,12 @@ function pickFeatured(movies) {
   return pool[day % pool.length];
 }
 
-function Hero({ featured, moods, onSearch, busy }) {
+const KINDS = [
+  { kind: 'movie', label: 'Films' },
+  { kind: 'tv', label: 'Series' },
+];
+
+function Hero({ featured, moods, kind, onKind, onSearch, busy }) {
   const { open } = useMovieDrawer();
   return (
     <section className="relative isolate overflow-hidden lg:-mt-20">
@@ -43,14 +48,29 @@ function Hero({ featured, moods, onSearch, busy }) {
 
       <div className="mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pt-16 lg:px-8 lg:pb-20 lg:pt-36">
         <h1 className="max-w-3xl font-display text-[2.75rem] leading-[1.02] tracking-[-0.02em] text-ink sm:text-6xl lg:text-7xl">
-          Find your next <em className="text-accent">favourite</em> film.
+          Find your next <em className="text-accent">favourite</em> {kind === 'tv' ? 'series' : 'film'}.
         </h1>
         <p className="mt-5 max-w-xl text-base text-muted sm:text-lg">
           Tell us how you want to feel. Clinema curates the rest, and learns your taste as you go.
         </p>
 
-        <h2 className="mb-4 mt-10 font-display text-2xl text-ink">What&apos;s your mood?</h2>
-        <MoodBar value={moods} onSubmit={onSearch} busy={busy} />
+        <div className="mb-4 mt-10 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-2xl text-ink">What&apos;s your mood?</h2>
+          <div role="group" aria-label="Recommend" className="flex rounded-full border border-line/[0.12] bg-canvas/70 p-0.5 text-sm backdrop-blur-sm">
+            {KINDS.map((k) => (
+              <button
+                key={k.kind}
+                type="button"
+                aria-pressed={kind === k.kind}
+                onClick={() => onKind(k.kind)}
+                className={`rounded-full px-4 py-1.5 transition-colors ${kind === k.kind ? 'bg-accent font-medium text-accent-ink' : 'text-muted hover:text-ink'}`}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <MoodBar value={moods} onSubmit={onSearch} busy={busy} noun={kind === 'tv' ? 'series' : 'films'} />
       </div>
 
       {featured && (
@@ -75,11 +95,12 @@ function Hero({ featured, moods, onSearch, busy }) {
   );
 }
 
-function Recommendations({ moods, result }) {
+function Recommendations({ moods, kind, result }) {
   const ready = result.status === 'success';
+  const noun = kind === 'tv' ? 'series' : 'films';
   const meta = [];
   if (ready) {
-    meta.push(`${result.data.movies.length} films for ${moods.join(', ')}`);
+    meta.push(`${result.data.movies.length} ${noun} for ${moods.join(', ')}`);
     if (result.data.personalized) meta.push('tuned to your taste');
     if (result.data.source === 'fallback') meta.push('AI curator unavailable — popular picks');
   }
@@ -93,7 +114,7 @@ function Recommendations({ moods, result }) {
         )}
       </SectionHeading>
       <p className="num -mt-2 mb-6 text-sm text-muted" aria-live="polite">
-        {ready ? meta.join(' · ') : result.status === 'error' ? 'Something went wrong' : `Curating films for ${moods.join(', ')}…`}
+        {ready ? meta.join(' · ') : result.status === 'error' ? 'Something went wrong' : `Curating ${noun} for ${moods.join(', ')}…`}
       </p>
 
       {result.status === 'error' && (
@@ -118,13 +139,16 @@ export default function DiscoverPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const moods = parseMoodParam(params.get('moods'));
-  const result = useSuggestions({ moods, enabled: moods.length > 0 });
+  const kind = params.get('type') === 'series' ? 'tv' : 'movie';
+  const result = useSuggestions({ moods, kind, enabled: moods.length > 0 });
   const trending = useTrending();
+  const trendingSeries = useTrending('tv');
   const library = useLibrary();
   const { isAuthenticated } = useAuth();
   useDocumentTitle(moods.length ? moods.join(', ') : null);
 
-  const search = (next) => navigate(`/?${new URLSearchParams({ moods: next.join(',') })}`);
+  const go = (nextMoods, nextKind) =>
+    navigate(`/?${new URLSearchParams({ ...(nextMoods.length ? { moods: nextMoods.join(',') } : {}), ...(nextKind === 'tv' ? { type: 'series' } : {}) })}`);
   const libraryShelf = (flag) =>
     Object.values(library.entries)
       .filter((e) => e[flag] && e.movie)
@@ -132,12 +156,20 @@ export default function DiscoverPage() {
 
   return (
     <>
-      <Hero featured={pickFeatured(trending.movies)} moods={moods} onSearch={search} busy={result.status === 'loading'} />
+      <Hero
+        featured={pickFeatured(trending.movies)}
+        moods={moods}
+        kind={kind}
+        onKind={(next) => go(moods, next)}
+        onSearch={(next) => go(next, kind)}
+        busy={result.status === 'loading'}
+      />
 
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-        {moods.length > 0 && <Recommendations moods={moods} result={result} />}
+        {moods.length > 0 && <Recommendations moods={moods} kind={kind} result={result} />}
 
-        <Shelf title="Trending this week" movies={trending.movies} loading={trending.status === 'loading'} />
+        <Shelf title="Trending films" movies={trending.movies} loading={trending.status === 'loading'} />
+        <Shelf title="Trending series" movies={trendingSeries.movies} loading={trendingSeries.status === 'loading'} />
         {isAuthenticated && (
           <>
             <Shelf title="Your watchlist" movies={libraryShelf('save')} seeAll="/library?tab=saved" />

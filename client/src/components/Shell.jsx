@@ -235,7 +235,7 @@ export function Topbar() {
             type="button"
             className="grid h-10 w-10 place-items-center rounded-md text-muted hover:text-ink lg:hidden"
             onClick={() => setSearchOpen((o) => !o)}
-            aria-label={searchOpen ? 'Close search' : 'Search for a film'}
+            aria-label={searchOpen ? 'Close search' : 'Search films and series'}
             aria-expanded={searchOpen}
           >
             {searchOpen ? <FiX className="h-5 w-5" /> : <FiSearch className="h-5 w-5" />}

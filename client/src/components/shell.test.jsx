@@ -66,7 +66,7 @@ describe('App shell', () => {
     const fetch = routeFetch({ '/api/movies/search': [stalker, { ...stalker, tmdb_id: 4, title: 'Stalker 2' }] });
     renderApp();
 
-    const box = screen.getAllByRole('combobox', { name: 'Search for a film' })[0];
+    const box = screen.getAllByRole('combobox', { name: 'Search films and series' })[0];
     await u.type(box, 's');
     expect(callsTo(fetch, '/api/movies/search')).toHaveLength(0); // under 2 characters
     await u.type(box, 'talker');
@@ -104,7 +104,7 @@ describe('App shell', () => {
     routeFetch({ '/api/movies/search': [] });
     renderApp();
     await u.type(screen.getAllByRole('combobox')[0], 'zzzz');
-    expect(await screen.findByText('No films match “zzzz”.')).toBeInTheDocument();
+    expect(await screen.findByText('No films or series match “zzzz”.')).toBeInTheDocument();
   });
 });
 

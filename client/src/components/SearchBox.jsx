@@ -83,7 +83,7 @@ export default function SearchBox({ autoFocus = false, onDone }) {
       <input
         type="search"
         role="combobox"
-        aria-label="Search for a film"
+        aria-label="Search films and series"
         aria-expanded={showPanel}
         aria-controls={listId}
         aria-autocomplete="list"
@@ -96,7 +96,7 @@ export default function SearchBox({ autoFocus = false, onDone }) {
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        placeholder="Search for a film…"
+        placeholder="Search films and series…"
         autoComplete="off"
         className="h-11 w-full rounded-full border border-line/10 bg-raised pl-11 pr-10 [&::-webkit-search-cancel-button]:hidden text-sm text-ink placeholder:text-subtle transition-colors duration-150 hover:border-line/20 focus:border-accent/60 focus:outline-none"
       />
@@ -135,6 +135,7 @@ export default function SearchBox({ autoFocus = false, onDone }) {
                 <span className="min-w-0">
                   <span className="block truncate text-sm text-ink">{movie.title}</span>
                   <span className="num flex gap-2 text-xs text-muted">
+                    {movie.kind === 'tv' && <span>Series</span>}
                     {movie.year && <span>{movie.year}</span>}
                     <Rating value={movie.rating} />
                   </span>
@@ -142,7 +143,7 @@ export default function SearchBox({ autoFocus = false, onDone }) {
               </li>
             ))}
           </ul>
-          {state.status === 'ready' && !state.results.length && <p className="px-4 py-3 text-sm text-muted">No films match “{term}”.</p>}
+          {state.status === 'ready' && !state.results.length && <p className="px-4 py-3 text-sm text-muted">No films or series match “{term}”.</p>}
           {state.status === 'error' && <p className="px-4 py-3 text-sm text-dislike">{state.error}</p>}
           {state.status === 'loading' && !state.results.length && <p className="px-4 py-3 text-sm text-subtle">Searching…</p>}
         </div>

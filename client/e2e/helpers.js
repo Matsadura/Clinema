@@ -22,7 +22,7 @@ export async function signUp(page, { first = 'Robin', tag = 'user' } = {}) {
 
 /** Search from the top bar and open the first result in the drawer. */
 export async function openFromSearch(page, query) {
-  await page.getByRole('combobox', { name: 'Search for a film' }).first().fill(query);
+  await page.getByRole('combobox', { name: 'Search films and series' }).first().fill(query);
   await page.getByRole('option').first().click();
   return page.getByRole('dialog');
 }

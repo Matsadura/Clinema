@@ -105,6 +105,7 @@ function MovieCard({ movie, liked = false, saved = false, disliked = false, seen
 
       <h3 className="mt-3 text-sm font-medium text-ink line-clamp-1">{title}</h3>
       <p className="num mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted">
+        {movie.kind === 'tv' && <span className="text-accent">Series</span>}
         {year && <span>{year}</span>}
         {year && genre && <span aria-hidden="true">·</span>}
         {genre && <span className="truncate">{genre}</span>}

@@ -5,8 +5,8 @@ test('mobile: home, menu and search work without horizontal scrolling', async ({
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-  await page.getByRole('button', { name: 'Search for a film' }).click();
-  await page.getByRole('combobox', { name: 'Search for a film' }).last().fill('Paper');
+  await page.getByRole('button', { name: 'Search films and series' }).click();
+  await page.getByRole('combobox', { name: 'Search films and series' }).last().fill('Paper');
   await page.getByRole('option').first().click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Paper Lanterns' }).first()).toBeVisible();
 });

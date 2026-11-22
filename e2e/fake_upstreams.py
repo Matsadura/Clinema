@@ -36,15 +36,26 @@ FILMS = [{
     "genre_ids": GENRES[i % len(GENRES)],
 } for i, t in enumerate(TITLES)]
 BY_ID = {f["id"]: f for f in FILMS}
+SHOW_NAMES = ["Quiet Harbour", "The Lighthouse Years", "Northern Shift",
+              "Paper Cities", "Slow Rivers", "The Night Desk"]
+SHOWS = [{
+    "id": 8000 + i, "name": n, "original_name": n,
+    "overview": f"{n}: a slow-burning series about small lives.",
+    "poster_path": f"/e2e-show-{i}.jpg", "backdrop_path": f"/e2e-sb-{i}.jpg",
+    "first_air_date": f"{2005 + i}-09-01", "vote_average": 7.5,
+    "popularity": 60 - i, "original_language": "en",
+    "genre_ids": [18, 9648],
+} for i, n in enumerate(SHOW_NAMES)]
+SHOWS_BY_ID = {s["id"]: s for s in SHOWS}
 PEOPLE = {7001: "Ada Marlowe", 7002: "Jonas Reyes", 7003: "Mira Okafor"}
 _llm_calls = 0
 _lock = threading.Lock()
 
 
-def details(film):
+def details(film, pool=FILMS):
     data = dict(film, genres=[{"id": g, "name": GENRE_NAMES[g]}
                               for g in film["genre_ids"]])
-    others = [f for f in FILMS if f["id"] != film["id"]]
+    others = [f for f in pool if f["id"] != film["id"]]
     data.update({
         "credits": {
             "cast": [{"id": pid, "name": name, "character": f"Role {n}",
@@ -72,9 +83,13 @@ def chat_completion(body):
     with _lock:
         start = (_llm_calls * 7) % len(FILMS)
         _llm_calls += 1
-    order = FILMS[start:] + FILMS[:start]
-    picks = [f for f in order if f["title"] not in excluded][:20]
-    movies = [{"title": f["title"], "year": int(f["release_date"][:4]),
+    pool = SHOWS if "TV series" in prompt else FILMS
+    start %= len(pool)
+    order = pool[start:] + pool[:start]
+    name = "name" if pool is SHOWS else "title"
+    date = "first_air_date" if pool is SHOWS else "release_date"
+    picks = [f for f in order if f[name] not in excluded][:20]
+    movies = [{"title": f[name], "year": int(f[date][:4]),
                "genres": [GENRE_NAMES[g] for g in f["genre_ids"]],
                "director": f"Director {f['id']}", "country": "France",
                "tone": "bittersweet", "mood_fit": "Gentle and absorbing.",
@@ -106,12 +121,34 @@ class Handler(BaseHTTPRequestHandler):
         path = url.path
         if path == "/healthz":
             return self._send(200, {"ok": True})
+        needle = q.get("query", "").lower()
         if path == "/3/search/movie":
-            needle = q.get("query", "").lower()
             hits = [f for f in FILMS if needle in f["title"].lower()]
+            return self._send(200, {"results": hits})
+        if path == "/3/search/tv":
+            hits = [s for s in SHOWS if needle in s["name"].lower()]
+            return self._send(200, {"results": hits})
+        if path == "/3/search/multi":
+            hits = [dict(f, media_type="movie") for f in FILMS
+                    if needle in f["title"].lower()]
+            hits += [dict(s, media_type="tv") for s in SHOWS
+                     if needle in s["name"].lower()]
             return self._send(200, {"results": hits})
         if path in ("/3/trending/movie/week", "/3/discover/movie"):
             return self._send(200, {"results": FILMS[:20]})
+        if path in ("/3/trending/tv/week", "/3/discover/tv"):
+            return self._send(200, {"results": SHOWS})
+        m = re.fullmatch(r"/3/tv/(\d+)(/videos)?", path)
+        if m:
+            show = SHOWS_BY_ID.get(int(m.group(1)))
+            if not show:
+                return self._send(404, {"status_message": "not found"})
+            if m.group(2):
+                return self._send(200, {"results": [{
+                    "key": "e2eSeries01", "site": "YouTube",
+                    "type": "Trailer", "official": True, "name": "Trailer"}]})
+            return self._send(200, dict(details(show, SHOWS),
+                                        created_by=[{"name": "Ines Moreau"}]))
         m = re.fullmatch(r"/3/movie/(\d+)(/videos)?", path)
         if m:
             film = BY_ID.get(int(m.group(1)))
@@ -129,7 +166,10 @@ class Handler(BaseHTTPRequestHandler):
                 "id": int(m.group(1)), "name": PEOPLE[int(m.group(1))],
                 "known_for_department": "Acting", "biography": "An actor.",
                 "profile_path": None,
-                "movie_credits": {"cast": FILMS[:6], "crew": []}})
+                "combined_credits": {
+                    "cast": [dict(f, media_type="movie") for f in FILMS[:6]]
+                    + [dict(s, media_type="tv") for s in SHOWS[:2]],
+                    "crew": []}})
         return self._send(404, {"status_message": "not found"})
 
     def do_POST(self):

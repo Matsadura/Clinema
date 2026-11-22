@@ -10,7 +10,7 @@ import { addSeenIds, getSeenIds } from '../lib/seen.js';
  *
  * status: 'idle' | 'loading' | 'success' | 'error'
  */
-export function useSuggestions({ moods = [], enabled = true }) {
+export function useSuggestions({ moods = [], kind = 'movie', enabled = true }) {
   const [state, setState] = useState({ status: 'idle', data: null, error: null });
   const [attempt, setAttempt] = useState(0);
   const controllerRef = useRef(null);
@@ -26,6 +26,7 @@ export function useSuggestions({ moods = [], enabled = true }) {
     const request = {
       moods: moodKey ? moodKey.split(',') : [],
       seenIds: getSeenIds(),
+      kind,
     };
     api
       .suggestions(request, { signal: controller.signal })
@@ -39,7 +40,7 @@ export function useSuggestions({ moods = [], enabled = true }) {
       });
 
     return () => controller.abort();
-  }, [enabled, moodKey, attempt]);
+  }, [enabled, moodKey, kind, attempt]);
 
   // Same request again: thanks to seen_ids the server returns new films.
   const retry = useCallback(() => setAttempt((n) => n + 1), []);

@@ -19,5 +19,5 @@ test('film drawer plays the trailer in place and shows where to watch and cast',
   await drawer.getByRole('link', { name: /Ada Marlowe/ }).click();
   await expect(page).toHaveURL(/\/person\/7001$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Ada Marlowe' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Films' }).getByRole('listitem')).toHaveCount(6);
+  await expect(page.getByRole('region', { name: 'Films and series' }).getByRole('listitem')).toHaveCount(8);
 });

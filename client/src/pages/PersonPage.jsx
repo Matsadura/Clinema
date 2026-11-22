@@ -89,8 +89,8 @@ export default function PersonPage() {
             </div>
           </header>
 
-          <section aria-label="Films" className="mt-12">
-            <h2 className="mb-6 font-display text-display-sm text-ink">Films</h2>
+          <section aria-label="Films and series" className="mt-12">
+            <h2 className="mb-6 font-display text-display-sm text-ink">Films &amp; series</h2>
             {person.movies.length ? (
               <MovieGrid movies={person.movies} />
             ) : (

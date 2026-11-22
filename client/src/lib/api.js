@@ -105,11 +105,12 @@ export const api = {
 
   // Sends the token when signed in so results are personalised; seenIds
   // lets the server avoid repeating films this browser already showed.
-  suggestions: ({ moods = [], seenIds = [] }, opts = {}) =>
+  suggestions: ({ moods = [], seenIds = [], kind = 'movie' }, opts = {}) =>
     request('/suggestions', {
       method: 'POST',
       body: {
         moods,
+        kind,
         ...(seenIds.length ? { seen_ids: seenIds } : {}),
       },
       auth: true,
@@ -118,7 +119,7 @@ export const api = {
     }),
 
   searchMovies: (query, opts) => request(`/movies/search?q=${encodeURIComponent(query)}`, opts),
-  trending: (opts) => request('/movies/trending', opts),
+  trending: (kind, opts) => request(`/movies/trending?kind=${kind}`, opts),
   movieExtras: (tmdbId, region, opts) =>
     request(`/movies/${encodeURIComponent(tmdbId)}/extras?region=${encodeURIComponent(region)}`, opts),
   person: (personId, opts) => request(`/people/${encodeURIComponent(personId)}`, opts),

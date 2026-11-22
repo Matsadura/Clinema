@@ -34,7 +34,7 @@ export default function MovieDetails({ movie, onClose, onOpen, liked, saved, dis
   const { title, poster, backdrop, year, rating, description, language, tmdb_id: tmdbId, why, fit, tone, director } = movie;
   const genres = Array.isArray(movie.genres) ? movie.genres.slice(0, 3) : [];
   const state = { like: liked, save: saved, dislike: disliked, seen };
-  const meta = [year, languageName(language)].filter(Boolean);
+  const meta = [movie.kind === 'tv' && 'Series', year, languageName(language)].filter(Boolean);
 
   return (
     <Modal open={!!movie} onClose={onClose} title={title} variant="drawer" hideTitle>
@@ -87,7 +87,7 @@ export default function MovieDetails({ movie, onClose, onOpen, liked, saved, dis
 
           {tmdbId && (
             <a
-              href={`https://www.themoviedb.org/movie/${tmdbId}`}
+              href={tmdbId < 0 ? `https://www.themoviedb.org/tv/${-tmdbId}` : `https://www.themoviedb.org/movie/${tmdbId}`}
               target="_blank"
               rel="noreferrer"
               className="mt-6 inline-flex items-center gap-1.5 text-sm text-subtle transition-colors hover:text-ink"
