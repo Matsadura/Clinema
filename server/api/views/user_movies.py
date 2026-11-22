@@ -77,9 +77,12 @@ def _parse_flags(data):
     return flags
 
 
-def _entry(user, tmdb_id):
-    return storage.session.query(User_Movie).filter_by(
-        user_id=user.id, movie_id=tmdb_id).first()
+def _entry(user, tmdb_id, latest=False):
+    query = storage.session.query(User_Movie).filter_by(
+        user_id=user.id, movie_id=tmdb_id)
+    # MySQL's REPEATABLE READ keeps returning this transaction's snapshot;
+    # a locking read sees the row another request just committed
+    return (query.with_for_update() if latest else query).first()
 
 
 @app_views.get('/<user_id>/library')
@@ -136,7 +139,7 @@ def set_library_flags(tmdb_id, user):
         except IntegrityError:
             # A concurrent request (e.g. Like then Watchlist in quick
             # succession) created the row first: update that one
-            entry = _entry(user, tmdb_id)
+            entry = _entry(user, tmdb_id, latest=True)
     for flag, value in flags.items():
         if bool(getattr(entry, flag)) != value:
             taste.record_event(user.id, tmdb_id,

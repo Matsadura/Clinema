@@ -76,9 +76,12 @@ def test_concurrent_first_write_updates_the_same_row(client, monkeypatch):
     real = user_movies._entry
     calls = {"n": 0}
 
-    def racing(user, tmdb_id):
+    def racing(user, tmdb_id, latest=False):
         calls["n"] += 1
-        return None if calls["n"] == 1 else real(user, tmdb_id)
+        if calls["n"] == 1:
+            return None
+        assert latest, "the retry must not read the stale snapshot"
+        return real(user, tmdb_id, latest)
 
     monkeypatch.setattr(user_movies, "_entry", racing)
     res = client.put(f"/api/{uid}/library/550", headers=h,
