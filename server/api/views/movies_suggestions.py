@@ -1,9 +1,5 @@
 #!/usr/bin/python3
-"""AI movie suggestion routes.
-
-``POST /api/suggestions`` is the primary endpoint; ``/movies_by_mood`` is
-kept as an alias for older clients.
-"""
+"""AI movie suggestion route: ``POST /api/suggestions``."""
 import logging
 
 from flask import current_app, g, jsonify
@@ -76,13 +72,3 @@ def _run(data):
 def suggestions():
     """Body: {"moods": ["Calm", ...], "seen_ids": [tmdb ids]?}"""
     return _run(json_body())
-
-
-@app_views.route('/movies_by_mood', methods=['POST'])
-@limiter.limit(SUGGESTION_LIMIT)
-def movie_suggestion_mood_only():
-    """Legacy alias. Body: {"mood": [...]}"""
-    data = json_body()
-    if data is not None:
-        data = {"mood": data.get("mood")}
-    return _run(data)

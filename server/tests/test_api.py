@@ -86,7 +86,7 @@ def test_suggestions_fallback_when_llm_down(client, mocked, fake_llm):
     fake_llm.error = RuntimeError("groq down")
     mocked.get(TMDB_DISCOVER, json={"results": [
         tmdb_movie(i, f"Film {i}") for i in range(1, 9)]})
-    res = client.post("/api/movies_by_mood", json={"mood": ["Sad"]})
+    res = client.post("/api/suggestions", json={"moods": ["Sad"]})
     assert res.status_code == 200
     assert res.get_json()["source"] == "fallback"
     assert len(res.get_json()["movies"]) == 8
@@ -100,7 +100,7 @@ def test_suggestions_validation(client):
                       json={"moods": ["drop table users;"]})
     assert res.status_code == 400
     assert client.post("/api/movies_by_mood",
-                       json={}).status_code == 400
+                       json={"mood": ["Sad"]}).status_code == 404
 
 
 # -- removed routes ------------------------------------------------------
@@ -113,3 +113,4 @@ def test_movie_cache_cannot_be_written_or_listed(client):
                        headers=headers).status_code in (404, 405)
     assert client.get("/api/movies").status_code == 404
     assert client.get("/api/movies/949").status_code == 404
+    assert client.get("/api/stats").status_code == 404  # leaked user count

@@ -11,17 +11,15 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from models.api_key import UserApiKey
+# Every model is imported so it registers its table on Base.metadata
+from models.api_key import UserApiKey  # noqa: F401
 from models.base_model import Base
-from models.interaction import Interaction, TasteProfile
-from models.movie import Movie
-from models.user import User
-from models.user_movie import User_Movie
+from models.interaction import Interaction, TasteProfile  # noqa: F401
+from models.movie import Movie  # noqa: F401
+from models.user import User  # noqa: F401
+from models.user_movie import User_Movie  # noqa: F401
 
 log = logging.getLogger(__name__)
-
-classes = {"Movie": Movie, "User_Movie": User_Movie, "User": User,
-           "Interaction": Interaction, "UserApiKey": UserApiKey}
 
 
 def database_url_from_env():
@@ -149,24 +147,6 @@ class DBStorage:
             self._session.delete(obj)
 
     # -- queries -----------------------------------------------------------
-    def all(self, cls=None):
-        """Return {"Class.id": obj} for one class or all classes."""
-        result = {}
-        for name, klass in classes.items():
-            if cls is None or cls is klass or cls == name:
-                for obj in self._session.query(klass).all():
-                    result[f"{name}.{obj.id}"] = obj
-        return result
-
-    def all_list(self, cls):
-        """Return every instance of ``cls`` as a list."""
-        return self._session.query(cls).all()
-
-    def all_list_specific(self, cls, attribute, value):
-        """Return instances of ``cls`` whose ``attribute`` equals ``value``."""
-        return self._session.query(cls).filter(
-            getattr(cls, attribute) == value).all()
-
     def get(self, cls, id):
         """Return the object of ``cls`` with primary key ``id`` or None."""
         if id is None:
@@ -177,15 +157,3 @@ class DBStorage:
         """Return the first ``cls`` whose ``attribute`` equals ``value``."""
         return self._session.query(cls).filter(
             getattr(cls, attribute) == value).first()
-
-    def get_specific_double(self, cls, attr_1, val_1, attr_2, val_2):
-        """Return the first ``cls`` matching two attribute filters."""
-        return self._session.query(cls).filter(
-            getattr(cls, attr_1) == val_1,
-            getattr(cls, attr_2) == val_2).first()
-
-    def count(self, cls=None):
-        """Count objects of ``cls`` (or of every class)."""
-        if cls is not None:
-            return self._session.query(cls).count()
-        return sum(self._session.query(k).count() for k in classes.values())

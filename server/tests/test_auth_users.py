@@ -90,12 +90,11 @@ def test_legacy_sha256_hash_is_upgraded_on_login(client, app):
 
 
 def test_protected_routes_require_token(client):
-    for path in ("/api/auth_validate", "/api/users/profile"):
-        res = client.get(path)
-        assert res.status_code == 401
-        assert "error" in res.get_json()
+    res = client.get("/api/auth_validate")
+    assert res.status_code == 401
+    assert "error" in res.get_json()
     bad = {"Authorization": "Bearer not-a-jwt"}
-    assert client.get("/api/users/profile", headers=bad).status_code == 401
+    assert client.get("/api/auth_validate", headers=bad).status_code == 401
 
 
 def test_update_profile(client):

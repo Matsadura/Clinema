@@ -3,9 +3,6 @@
 from api.extensions import limiter
 from api.views import app_views
 from models import storage
-from models.movie import Movie
-from models.user import User
-from models.user_movie import User_Movie
 
 
 @app_views.route('/status')
@@ -22,14 +19,6 @@ def health():
     if storage.ping():
         return {"status": "OK", "database": "up"}, 200
     return {"status": "degraded", "database": "down"}, 503
-
-
-@app_views.route('/stats')
-def stats():
-    """Return the count of all classes"""
-    return {"Users": storage.count(User),
-            "Movies": storage.count(Movie),
-            "User_Movies": storage.count(User_Movie)}
 
 
 @app_views.route('/features')

@@ -12,7 +12,6 @@ work for the user that owns the token (otherwise `403`).
 |---|---|---|
 | GET | `/status` | Liveness: `{"status": "OK"}` |
 | GET | `/health` | Readiness: `200 {"status":"OK","database":"up"}` or `503` |
-| GET | `/stats` | Row counts per table |
 
 ## Auth
 
@@ -62,17 +61,13 @@ At least one mood is required. Moods are 1–32 letters (spaces, `-` and `'` all
 - `source` is `"ai"` when the LLM produced the list, or `"fallback"` when TMDB genre discovery was used.
 - `503` means no recommendations could be produced at all.
 
-Legacy alias with the same response: `POST /movies_by_mood` (`{"mood": [...]}`).
 
 ## Movies (local cache of TMDB metadata)
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/movies?limit=50&offset=0` | Paginated list (`limit` ≤ 200) |
-| GET | `/movies/<tmdb_id>` | One movie. Fetched from TMDB and cached if unknown. |
 | GET | `/movies/search?q=` | Title search on TMDB (2–100 characters), up to 12 poster-bearing results by popularity; cached for 1 hour. Limited to 60 per minute. |
 | GET | `/movies/trending` | This week's trending films (with posters and backdrops), cached for 1 hour. |
-| POST 🔒 | `/movies` | Cache a movie (`title` and `tmdb_id` required). `409` if it already exists. |
 
 ## Library 🔒
 
@@ -84,10 +79,6 @@ Legacy alias with the same response: `POST /movies_by_mood` (`{"mood": [...]}`).
 | POST | `/<user_id>/interactions` | Log a browsing signal `{"movie_id": 550, "event": "view"}` (`201`) |
 | GET | `/<user_id>/taste` | `{profile, summary, personalized}`: the learned profile and the text injected into prompts |
 | GET | `/<user_id>/disliked` | Disliked entries, with `movie` details |
-| GET | `/<user_id>/liked`, `/<user_id>/save` | Filtered entries, with `movie` details |
-| GET | `/<user_id>/user_movies` | Raw entries |
-| POST | `/<user_id>/liked`, `/<user_id>/save` | Legacy create: `{movie_id, like?, save?}`. `409` if the entry exists. |
-| PUT / DELETE | `/<user_id>/liked/<entry_id>`, `/<user_id>/save/<entry_id>` | Update or delete one of your own entries |
 
 ## Bring-your-own API keys 🔒
 
@@ -106,7 +97,6 @@ missing or rejected, the server's key is used. Rejected keys are marked `invalid
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/users/profile` | Current user |
 | PUT | `/users/<user_id>/profile` | `{first_name?, last_name?}` (1–128 characters each) |
 | DELETE | `/users/<user_id>/profile` | Delete the account and its library |
 

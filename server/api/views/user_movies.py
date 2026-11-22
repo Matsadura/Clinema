@@ -12,11 +12,6 @@ Routes:
     - GET    /<user_id>/history                  Recent activity per movie
     - POST   /<user_id>/interactions             Log a view {movie_id}
     - GET    /<user_id>/taste                    Learned taste profile
-    - GET    /<user_id>/user_movies              All raw entries
-    - GET    /<user_id>/liked | /<user_id>/save  Filtered entries + details
-    - POST   /<user_id>/liked | /<user_id>/save  Create entry (legacy)
-    - PUT    /<user_id>/liked/<id> | save/<id>   Update entry (legacy)
-    - DELETE /<user_id>/liked/<id> | save/<id>   Delete entry
 """
 from flask import current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
@@ -84,13 +79,6 @@ def _parse_flags(data):
 def _entry(user, tmdb_id):
     return storage.session.query(User_Movie).filter_by(
         user_id=user.id, movie_id=tmdb_id).first()
-
-
-def _owned_entry(user, user_movie_id):
-    entry = storage.get(User_Movie, user_movie_id)
-    if entry is None or entry.user_id != user.id:
-        return None
-    return entry
 
 
 @app_views.get('/<user_id>/library')
@@ -242,84 +230,3 @@ def get_taste(user):
     return jsonify({'profile': profile,
                     'summary': taste.summarize(profile),
                     'personalized': taste.has_signal(profile)})
-
-
-@app_views.get('/<user_id>/user_movies')
-@owner_required
-def user_movies(user):
-    """All of the user's raw library entries."""
-    return jsonify([e.to_dict() for e in _user_entries(user)])
-
-
-@app_views.get('/<user_id>/save')
-@owner_required
-def save_movies(user):
-    """Saved movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'save'), user))
-
-
-@app_views.get('/<user_id>/liked')
-@owner_required
-def liked_movies(user):
-    """Liked movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'like'), user))
-
-
-@app_views.get('/<user_id>/disliked')
-@owner_required
-def disliked_movies(user):
-    """Disliked movies with details."""
-    return jsonify(_with_movies(_user_entries(user, 'dislike'), user))
-
-
-@app_views.post('/<user_id>/save')
-@app_views.post('/<user_id>/liked')
-@owner_required
-def save_or_liked(user):
-    """Create a library entry. Body: movie_id (TMDB id) + like/save."""
-    data = json_body()
-    if data is None:
-        return error('Invalid data')
-    try:
-        movie_id = int(data.get('movie_id'))
-        flags = _parse_flags(data)
-    except (TypeError, ValueError):
-        return error('A valid movie_id and boolean like/save are required')
-    if not flags:
-        return error('Missing required save or like boolean')
-
-    if storage.get_specific_double(User_Movie, 'user_id', user.id,
-                                   'movie_id', movie_id):
-        return error('User Movie relation already exists', 409)
-
-    entry = User_Movie(user_id=user.id, movie_id=movie_id, **flags)
-    storage.new(entry)
-    storage.save()
-    return jsonify(entry.to_dict()), 201
-
-
-@app_views.route('/<user_id>/liked/<user_movie_id>', methods=['DELETE', 'PUT'])
-@app_views.route('/<user_id>/save/<user_movie_id>', methods=['DELETE', 'PUT'])
-@owner_required
-def user_movie_id(user_movie_id, user):
-    """Update or delete one of the caller's own library entries."""
-    entry = _owned_entry(user, user_movie_id)
-    if entry is None:
-        return error('User_movie not found', 404)
-
-    if request.method == 'DELETE':
-        storage.delete(entry)
-        storage.save()
-        return jsonify({})
-
-    data = json_body()
-    if data is None:
-        return error('No data provided')
-    try:
-        flags = _parse_flags(data)
-    except ValueError as exc:
-        return error(str(exc))
-    for flag, value in flags.items():
-        setattr(entry, flag, value)
-    storage.save()
-    return jsonify(entry.to_dict()), 200

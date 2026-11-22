@@ -25,11 +25,6 @@ def test_library_upsert_and_listing(client, app):
     assert lib[0]["like"] and lib[0]["save"]
     assert lib[0]["movie"]["title"] == "Fight Club"
 
-    liked = client.get(f"/api/{uid}/liked", headers=h).get_json()
-    saved = client.get(f"/api/{uid}/save", headers=h).get_json()
-    assert [e["movie_id"] for e in liked] == [550]
-    assert [e["movie_id"] for e in saved] == [550]
-
 
 def test_clearing_both_flags_removes_entry(client):
     uid, h = register_and_login(client)
@@ -54,44 +49,20 @@ def test_library_validates_flags(client):
 def test_cannot_read_another_users_library(client):
     _, h = register_and_login(client)
     other, _ = register_and_login(client, email="bob@example.com")
-    for path in ("library", "liked", "save", "user_movies"):
+    for path in ("library", "history", "taste", "watchlist/share"):
         assert client.get(f"/api/{other}/{path}",
                           headers=h).status_code == 403
     assert client.get(f"/api/{other}/library").status_code == 401
 
 
-def test_cannot_edit_another_users_entry_by_id(client):
-    """Regression test for the IDOR in the original PUT/DELETE routes."""
-    bob, bob_h = register_and_login(client, email="bob@example.com")
-    entry = client.post(f"/api/{bob}/liked", headers=bob_h,
-                        json={"movie_id": 7, "like": True}).get_json()
-
-    mallory, mal_h = register_and_login(client, email="mal@example.com")
-    for verb in (client.put, client.delete):
-        res = verb(f"/api/{mallory}/liked/{entry['id']}", headers=mal_h,
-                   json={"like": False})
-        assert res.status_code == 404
-    still = client.get(f"/api/{bob}/liked", headers=bob_h).get_json()
-    assert still[0]["like"] is True
-
-
-def test_legacy_create_update_delete(client):
+def test_legacy_library_routes_are_gone(client):
+    """The prototype's /liked and /save routes skipped taste learning."""
     uid, h = register_and_login(client)
-    res = client.post(f"/api/{uid}/save", headers=h,
-                      json={"movie_id": 9, "save": True})
-    assert res.status_code == 201
-    entry_id = res.get_json()["id"]
-    assert client.post(f"/api/{uid}/save", headers=h,
-                       json={"movie_id": 9, "save": True}).status_code == 409
-    assert client.post(f"/api/{uid}/save", headers=h,
-                       json={"movie_id": 10}).status_code == 400
-
-    res = client.put(f"/api/{uid}/save/{entry_id}", headers=h,
-                     json={"like": True})
-    assert res.get_json()["like"] is True
-    assert client.delete(f"/api/{uid}/save/{entry_id}",
-                         headers=h).status_code == 200
-    assert client.get(f"/api/{uid}/user_movies", headers=h).get_json() == []
+    for path in ("liked", "save", "disliked", "user_movies"):
+        assert client.get(f"/api/{uid}/{path}",
+                          headers=h).status_code == 404
+    assert client.post(f"/api/{uid}/liked", headers=h,
+                       json={"movie_id": 7, "like": True}).status_code == 404
 
 
 def test_concurrent_first_write_updates_the_same_row(client, monkeypatch):

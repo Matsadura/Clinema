@@ -3,7 +3,6 @@
 User profile routes (JWT required).
 
 Routes:
-    - GET    /users/profile              The authenticated user's profile
     - PUT    /users/<user_id>/profile    Update first_name / last_name
     - DELETE /users/<user_id>/profile    Delete the account
 """
@@ -16,13 +15,6 @@ from api.views.helpers import error, json_body
 from models import storage
 
 EDITABLE = ('first_name', 'last_name')
-
-
-@app_views.route('/users/profile', methods=['GET'])
-@jwt_required()
-def get_user_profile():
-    """Get the current user's profile."""
-    return jsonify(public_user(current_user))
 
 
 @app_views.route('/users/<user_id>/profile', methods=['DELETE', 'PUT'])
