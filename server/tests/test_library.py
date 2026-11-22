@@ -92,3 +92,31 @@ def test_legacy_create_update_delete(client):
     assert client.delete(f"/api/{uid}/save/{entry_id}",
                          headers=h).status_code == 200
     assert client.get(f"/api/{uid}/user_movies", headers=h).get_json() == []
+
+
+def test_concurrent_first_write_updates_the_same_row(client, monkeypatch):
+    """Like then Watchlist on a new film sends two requests at once; both
+    may see no row. The second insert must merge into the first row."""
+    import importlib
+    user_movies = importlib.import_module("api.views.user_movies")
+    uid, h = register_and_login(client)
+    client.put(f"/api/{uid}/library/550", headers=h, json={"like": True})
+
+    real = user_movies._entry
+    calls = {"n": 0}
+
+    def racing(user, tmdb_id):
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(user, tmdb_id)
+
+    monkeypatch.setattr(user_movies, "_entry", racing)
+    res = client.put(f"/api/{uid}/library/550", headers=h,
+                     json={"save": True})
+    assert res.status_code == 200
+    monkeypatch.undo()
+
+    lib = client.get(f"/api/{uid}/library", headers=h).get_json()
+    assert len(lib) == 1 and lib[0]["like"] and lib[0]["save"]
+    client.put(f"/api/{uid}/library/550", headers=h, json={"like": False})
+    lib = client.get(f"/api/{uid}/library", headers=h).get_json()
+    assert lib[0]["like"] is False and lib[0]["save"] is True

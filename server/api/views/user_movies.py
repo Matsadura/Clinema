@@ -19,6 +19,7 @@ Routes:
     - DELETE /<user_id>/liked/<id> | save/<id>   Delete entry
 """
 from flask import current_app, jsonify, request
+from sqlalchemy.exc import IntegrityError
 
 from api.services import taste, tmdb
 from api.views import app_views
@@ -80,6 +81,11 @@ def _parse_flags(data):
     return flags
 
 
+def _entry(user, tmdb_id):
+    return storage.session.query(User_Movie).filter_by(
+        user_id=user.id, movie_id=tmdb_id).first()
+
+
 def _owned_entry(user, user_movie_id):
     entry = storage.get(User_Movie, user_movie_id)
     if entry is None or entry.user_id != user.id:
@@ -131,12 +137,17 @@ def set_library_flags(tmdb_id, user):
     if flags.get('dislike'):
         flags.setdefault('like', False)
 
-    entry = storage.get_specific_double(
-        User_Movie, 'user_id', user.id, 'movie_id', tmdb_id)
+    entry = _entry(user, tmdb_id)
     if entry is None:
         entry = User_Movie(user_id=user.id, movie_id=tmdb_id, like=False,
                            save=False, dislike=False, seen=False)
-        storage.new(entry)
+        try:
+            with storage.session.begin_nested():
+                storage.new(entry)
+        except IntegrityError:
+            # A concurrent request (e.g. Like then Watchlist in quick
+            # succession) created the row first: update that one
+            entry = _entry(user, tmdb_id)
     for flag, value in flags.items():
         if bool(getattr(entry, flag)) != value:
             taste.record_event(user.id, tmdb_id,

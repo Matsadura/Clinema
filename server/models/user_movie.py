@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Holds class User_Movie (a user's like/save/dislike/seen flags)."""
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import (Boolean, Column, ForeignKey, Integer, String,
+                        UniqueConstraint)
 from sqlalchemy.orm import relationship
 
 from models.base_model import Base, BaseModel
@@ -9,6 +10,8 @@ from models.base_model import Base, BaseModel
 class User_Movie(BaseModel, Base):
     """Relationship between a user and a TMDB movie id."""
     __tablename__ = 'user_movies'
+    __table_args__ = (UniqueConstraint('user_id', 'movie_id',
+                                       name='uq_user_movies_user_movie'),)
     user_id = Column(String(128),
                      ForeignKey('users.id', ondelete='CASCADE'),
                      nullable=False, index=True)

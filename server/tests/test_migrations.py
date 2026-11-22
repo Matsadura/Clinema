@@ -95,3 +95,29 @@ def test_0004_removes_only_openweather_keys(engine):
             "SELECT provider FROM user_api_keys")}
     assert providers == {"groq", "tmdb"}
     migrate(engine, command.downgrade, "0003")  # data-only: no-op
+
+
+def test_0007_merges_duplicate_library_rows(engine):
+    migrate(engine, command.upgrade, "0006")
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "INSERT INTO users (id, email, password, first_name, last_name) "
+            "VALUES ('u1', 'a@b.co', 'x', 'A', 'B')")
+        conn.exec_driver_sql(
+            'INSERT INTO user_movies (id, user_id, movie_id, save, "like", '
+            "dislike, seen, updated_at) VALUES "
+            "('old', 'u1', 7, 1, 1, 0, 0, '2026-01-01'), "
+            "('new', 'u1', 7, 0, 0, 1, 0, '2026-02-01'), "
+            "('other', 'u1', 8, 0, 1, 0, 0, '2026-01-01')")
+    migrate(engine, command.upgrade, "head")
+    with engine.connect() as conn:
+        rows = conn.exec_driver_sql(
+            'SELECT id, save, "like", dislike FROM user_movies '
+            "ORDER BY movie_id").fetchall()
+        # Latest like/dislike wins; the watchlist flag survives
+        assert rows == [("new", 1, 0, 1), ("other", 0, 1, 0)]
+        with pytest.raises(Exception):
+            conn.exec_driver_sql(
+                "INSERT INTO user_movies (id, user_id, movie_id) "
+                "VALUES ('dup', 'u1', 7)")
+    migrate(engine, command.downgrade, "0006")
