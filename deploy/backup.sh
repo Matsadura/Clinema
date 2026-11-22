@@ -23,7 +23,9 @@ docker compose exec -T db sh -c \
   | gzip -9 > "$TMP"
 
 gzip -t "$TMP"
-gunzip -c "$TMP" | grep -q "CREATE TABLE \`users\`" || { echo "backup looks incomplete" >&2; rm -f "$TMP"; exit 1; }
+# mysqldump writes this trailer only when it finishes; a dump cut off
+# midway (a pipe hides mysqldump's exit code) would lack it
+gunzip -c "$TMP" | tail -n 1 | grep -q "^-- Dump completed" || { echo "backup incomplete" >&2; rm -f "$TMP"; exit 1; }
 mv "$TMP" "$OUT"
 chmod 600 "$OUT"
 find "$DIR" -maxdepth 1 -name 'clinema-*.sql.gz' -mtime +"$KEEP_DAYS" -delete
