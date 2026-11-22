@@ -7,28 +7,49 @@ from tests.conftest import (TMDB_SEARCH, cached_title, register_and_login,
                             tmdb_movie)
 
 TMDB_TRENDING = "https://api.themoviedb.org/3/trending/movie/week"
+TMDB_MULTI = "https://api.themoviedb.org/3/search/multi"
+
+
+def tmdb_series(id_, name, year=2010, **extra):
+    """A TMDB TV result (name/first_air_date instead of title/release)."""
+    raw = tmdb_movie(id_, name, year, **extra)
+    raw["name"] = raw.pop("title")
+    raw["first_air_date"] = raw.pop("release_date")
+    return raw
 
 
 # -- search --------------------------------------------------------------
-def test_search_returns_poster_results_by_popularity(app, client, mocked):
-    mocked.get(TMDB_SEARCH, json={"results": [
-        tmdb_movie(1, "Heat", 1995, popularity=10),
-        tmdb_movie(2, "Heat 2", 2026, popularity=90),
-        tmdb_movie(3, "No Poster", poster=None),
+def test_search_finds_films_and_series_by_popularity(app, client, mocked):
+    mocked.get(TMDB_MULTI, json={"results": [
+        dict(tmdb_movie(1, "Heat", 1995, popularity=10), media_type="movie"),
+        dict(tmdb_movie(2, "Heat 2", 2026, popularity=90),
+             media_type="movie"),
+        dict(tmdb_series(2, "Heat Wave", 2014, popularity=50),
+             media_type="tv"),
+        dict(tmdb_movie(3, "No Poster", poster=None), media_type="movie"),
+        {"id": 9, "name": "Al Heat", "media_type": "person",
+         "profile_path": "/x.jpg", "poster_path": "/x.jpg"},
     ]})
     res = client.get("/api/movies/search?q=  Heat ")
     assert res.status_code == 200
-    assert [m["title"] for m in res.get_json()] == ["Heat 2", "Heat"]
+    found = [(m["title"], m["tmdb_id"], m["kind"], m["year"])
+             for m in res.get_json()]
+    # A series shares TMDB id 2 with a film: it's stored as -2
+    assert found == [("Heat 2", 2, "movie", 2026),
+                     ("Heat Wave", -2, "tv", 2014),
+                     ("Heat", 1, "movie", 1995)]
     assert mocked.calls[0].request.params["query"] == "heat"
     # Results are cached locally so the library can show them later
     assert cached_title(app, 2) == "Heat 2"
+    assert cached_title(app, -2) == "Heat Wave"
 
 
 def test_search_validation_and_caching(client, mocked):
     assert client.get("/api/movies/search").status_code == 400
     assert client.get("/api/movies/search?q=a").status_code == 400
     assert client.get("/api/movies/search?q=" + "x" * 101).status_code == 400
-    mocked.get(TMDB_SEARCH, json={"results": [tmdb_movie(1, "Up")]})
+    mocked.get(TMDB_MULTI, json={"results": [
+        dict(tmdb_movie(1, "Up"), media_type="movie")]})
     client.get("/api/movies/search?q=Up")
     client.get("/api/movies/search?q=up")
     assert len(mocked.calls) == 1
@@ -45,6 +66,15 @@ def test_trending_requires_posters_and_backdrops(client, mocked):
     assert data[0]["backdrop"].endswith("/b.jpg")
     assert client.get("/api/movies/trending").get_json() == data
     assert len(mocked.calls) == 1  # cached
+
+
+def test_trending_series(client, mocked):
+    mocked.get("https://api.themoviedb.org/3/trending/tv/week",
+               json={"results": [tmdb_series(7, "Slow Horses", 2022)]})
+    data = client.get("/api/movies/trending?kind=tv").get_json()
+    assert [(m["title"], m["tmdb_id"], m["kind"]) for m in data] == [
+        ("Slow Horses", -7, "tv")]
+    assert client.get("/api/movies/trending?kind=book").status_code == 400
 
 
 def test_trending_upstream_failure_is_empty(client, mocked):
@@ -272,23 +302,34 @@ def test_extras_validation_and_upstream_failure(client, mocked):
     assert client.get("/api/movies/7/extras").status_code == 502
 
 
-def test_person_lists_films_by_popularity_with_roles(client, mocked):
+def test_person_lists_films_and_series_with_roles(client, mocked):
+    def film(*a, **k):
+        return dict(tmdb_movie(*a, **k), media_type="movie")
+
+    def show(*a, **k):
+        return dict(tmdb_series(*a, **k), media_type="tv")
+
     mocked.get("https://api.themoviedb.org/3/person/5", json={
         "id": 5, "name": "Michael Mann", "profile_path": "/mm.jpg",
         "known_for_department": "Directing", "biography": "Director.",
-        "movie_credits": {
-            "cast": [tmdb_movie(30, "Cameo", 2000, popularity=1,
-                                character="Himself")],
-            "crew": [tmdb_movie(7, "Heat", 1995, popularity=80,
-                                job="Director"),
-                     tmdb_movie(31, "Produced", 2001, job="Producer"),
-                     tmdb_movie(32, "Unposterd", job="Director",
-                                poster=None)],
+        "combined_credits": {
+            "cast": [
+                film(30, "Cameo", 2000, popularity=1, character="Himself"),
+                show(7, "Crime Story", 1986, popularity=20,
+                     character="Narrator"),
+                show(40, "Late Show", 2015, popularity=99, character="Self",
+                     genre_ids=[10767]),  # a talk-show appearance
+            ],
+            "crew": [film(7, "Heat", 1995, popularity=80, job="Director"),
+                     film(31, "Produced", 2001, job="Producer"),
+                     film(32, "Unposterd", job="Director", poster=None)],
         }})
     data = client.get("/api/people/5").get_json()
     assert data["name"] == "Michael Mann" and data["photo"].endswith("mm.jpg")
-    assert [(m["title"], m["role"]) for m in data["movies"]] == [
-        ("Heat", "Director"), ("Cameo", "Himself")]
+    # Film 7 and series 7 are different works; the talk show is dropped
+    assert [(m["title"], m["tmdb_id"], m["role"]) for m in data["movies"]] \
+        == [("Heat", 7, "Director"), ("Crime Story", -7, "Narrator"),
+            ("Cameo", 30, "Himself")]
 
 
 def test_person_not_found(client, mocked):

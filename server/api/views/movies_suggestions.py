@@ -5,7 +5,7 @@ import logging
 from flask import current_app, g, jsonify
 
 from api.extensions import limiter
-from api.services import taste
+from api.services import taste, tmdb
 from api.services.recommender import parse_moods, recommend
 from api.views import app_views
 from api.views.helpers import (error, json_body, optional_user,
@@ -26,7 +26,8 @@ def _parse_seen_ids(value):
         raise ValueError("seen_ids must be a list of movie ids")
     ids = []
     for item in value[-MAX_SEEN_IDS:]:
-        if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
+        # Series use negative ids
+        if isinstance(item, bool) or not isinstance(item, int) or item == 0:
             raise ValueError("seen_ids must be a list of movie ids")
         ids.append(item)
     return ids
@@ -43,12 +44,15 @@ def _run(data):
         return error(str(exc))
     if not moods:
         return error("Select at least one mood")
+    kind = data.get('kind', 'movie')
+    if kind not in tmdb.KINDS:
+        return error('kind must be "movie" or "tv"')
 
     user = optional_user()
     keys = request_keys(user)
     user_id = user.id if user else None
     result = recommend(moods, current_app.config, user_id=user_id,
-                       seen_ids=seen_ids, keys=keys)
+                       seen_ids=seen_ids, keys=keys, kind=kind)
     upsert_movies(result["movies"])
     if user_id:
         try:
@@ -65,11 +69,13 @@ def _run(data):
         "suggestions": result["titles"],
         "source": result["source"],
         "moods": moods,
+        "kind": kind,
     })
 
 
 @app_views.route('/suggestions', methods=['POST'])
 @limiter.limit(SUGGESTION_LIMIT)
 def suggestions():
-    """Body: {"moods": ["Calm", ...], "seen_ids": [tmdb ids]?}"""
+    """Body: {"moods": ["Calm", ...], "kind": "movie"|"tv"?,
+    "seen_ids": [tmdb ids]?}"""
     return _run(json_body())

@@ -56,10 +56,18 @@ OVEREXPOSED = (
     "Into the Wild", "Good Will Hunting", "The Notebook", "Cinema Paradiso",
 )
 
+# Series staples, named in series prompts (the recommender keeps at most
+# one of these or of the film staples above)
+OVEREXPOSED_TV = (
+    "Breaking Bad", "Game of Thrones", "Friends", "The Office",
+    "Stranger Things", "The Crown", "Sherlock", "Black Mirror",
+    "The Sopranos", "Peaky Blinders", "Money Heist", "Squid Game",
+)
+
 SYSTEM_PROMPT = (
-    "You are Clinema's film curator. You recommend real, released feature "
-    "films that fit a viewer's mood, personalised to their learned "
-    "taste.\n"
+    "You are Clinema's film and TV curator. You recommend real, released "
+    "feature films, or TV series when asked, that fit a viewer's mood, "
+    "personalised to their learned taste.\n"
     "Rules:\n"
     "1. Vibe first: the moods set the emotional tone and atmosphere every "
     "pick must match.\n"
@@ -77,7 +85,8 @@ SYSTEM_PROMPT = (
     "the same director; mix subgenres.\n"
     "5. Never suggest any title from the excluded list.\n"
     "6. Use the exact original title or best-known English title and the "
-    "original release year.\n"
+    "original release year (a series' first air year; its creator as "
+    "director).\n"
     "7. mood_fit: one sentence (max 25 words) on why it suits the mood. "
     "personalized_reason: one sentence (max 25 words) "
     "linking it to the viewer's taste, or what makes it a distinctive "
@@ -168,9 +177,14 @@ def pick_focus(rng=None, k=2):
 
 
 def build_user_prompt(moods, count=MAX_TITLES, taste="", exclude=(),
-                      focus=()):
+                      focus=(), kind="movie"):
     """Compose the user message from validated inputs."""
-    parts = [f"Recommend {count} films."]
+    if kind == "tv":
+        parts = [f"Recommend {count} TV series (not films). Avoid obvious "
+                 "staples such as " + ", ".join(OVEREXPOSED_TV[:8]) +
+                 " unless one is uniquely right."]
+    else:
+        parts = [f"Recommend {count} films."]
     parts.append("Mood: " + (", ".join(moods) if moods else
                              "open to anything") + ".")
     if taste:
@@ -398,7 +412,8 @@ def _generate(messages, api_key, models, timeout):
 
 
 def suggest_titles(moods, api_key, model, timeout=20,
-                   taste="", exclude=(), count=MAX_TITLES, focus=None):
+                   taste="", exclude=(), count=MAX_TITLES, focus=None,
+                   kind="movie"):
     """Return a list of validated movie items; raise LLMError on failure.
 
     ``api_key`` is a key or an ordered list of candidate keys (the user's
@@ -415,7 +430,7 @@ def suggest_titles(moods, api_key, model, timeout=20,
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": build_user_prompt(
             list(moods), count + EXTRA_CANDIDATES, taste, list(exclude),
-            focus)},
+            focus, kind)},
     ]
     models = parse_models(model)
     attempted = False

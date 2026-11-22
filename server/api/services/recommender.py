@@ -29,7 +29,8 @@ LLM_ROUNDS = 2
 SECOND_ROUND_BELOW = 8
 SECOND_ROUND_BUDGET = 8.0  # seconds already spent
 MAX_OVEREXPOSED = 1
-_OVEREXPOSED = {taste.normalize_title(t) for t in llm.OVEREXPOSED}
+_OVEREXPOSED = {taste.normalize_title(t)
+                for t in llm.OVEREXPOSED + llm.OVEREXPOSED_TV}
 _MOOD_RE = re.compile(r"^[A-Za-z][A-Za-z \-']{0,31}$")
 
 # TMDB genre ids: 28 Action, 12 Adventure, 16 Animation, 35 Comedy,
@@ -143,7 +144,7 @@ class _Picker:
 
 
 def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
-              keys=None):
+              keys=None, kind="movie"):
     """Return {"movies", "titles", "source", "personalized"}.
 
     ``source`` is "ai" when the LLM produced the list (possibly topped up
@@ -156,7 +157,7 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
         raise ServiceError("Movie database is not configured")
 
     profile = taste.get_profile(user_id) if user_id else None
-    exclusion = taste.build_exclusion(user_id, seen_ids)
+    exclusion = taste.build_exclusion(user_id, seen_ids, kind=kind)
     excluded_count = len(exclusion)
     picker = _Picker(exclusion, TARGET_RESULTS)
     taste_text = taste.summarize(profile)
@@ -176,14 +177,15 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
                 config.get("GROQ_MODEL"), config.get("LLM_TIMEOUT", 20),
                 taste=taste_text,
                 exclude=exclusion.for_prompt() + picker.rejected[-20:],
-                count=need)
+                count=need, kind=kind)
         except llm.LLMError as exc:
             log.info("LLM unavailable, using discovery: %s", exc)
             break
         finally:
             llm_seconds += time.monotonic() - llm_started
         ai_titles += [i["title"] for i in items]
-        picker.add(tmdb.lookup_many(picker.screen(items), tmdb_key), "ai")
+        picker.add(tmdb.lookup_many(picker.screen(items), tmdb_key, kind),
+                   "ai")
         if len(picker.movies) >= picker.target - 1:
             break
         log.info("LLM round returned too few new films (%d/%d); retrying",
@@ -196,7 +198,8 @@ def recommend(moods, config, user_id=None, seen_ids=(), rng=random,
         for page in rng.sample(range(1, 6), 3):
             if picker.full:
                 break
-            extra = tmdb.discover(genres, tmdb_key, page, without) or []
+            extra = tmdb.discover(genres, tmdb_key, page, without,
+                                  kind) or []
             rng.shuffle(extra := list(extra))
             picker.add(extra, "discover")
             if ai_count >= MIN_RESULTS:

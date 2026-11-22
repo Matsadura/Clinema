@@ -295,9 +295,11 @@ class Exclusion:
         return len(self.ids)
 
 
-def build_exclusion(user_id=None, seen_ids=(), now=None):
+def build_exclusion(user_id=None, seen_ids=(), now=None, kind="movie"):
     """Everything previously recommended, viewed, liked, disliked or saved
     by the user, plus ``seen_ids`` sent by the client (anonymous sessions).
+    Titles (for matching and the prompt) only come from the same ``kind``,
+    so a liked film doesn't block a series of the same name.
     """
     now = now or utcnow()
     ordered = []  # tmdb ids, most recent first
@@ -322,6 +324,8 @@ def build_exclusion(user_id=None, seen_ids=(), now=None):
     exclusion = Exclusion()
     for movie_id in unique:
         movie = titles.get(movie_id)
-        exclusion.add(movie_id, movie.title if movie else None,
-                      movie.year if movie else None)
+        if movie is None or tmdb.kind_of(movie_id) != kind:
+            exclusion.add(movie_id)
+        else:
+            exclusion.add(movie_id, movie.title, movie.year)
     return exclusion

@@ -35,16 +35,20 @@ def search_movies():
 @app_views.route('/movies/trending', methods=['GET'])
 @limiter.limit("60 per minute")
 def trending_movies():
-    """This week's trending films (cached for an hour)."""
+    """This week's trending films, or series with ?kind=tv (cached 1h)."""
+    kind = request.args.get('kind', 'movie')
+    if kind not in tmdb.KINDS:
+        return error('kind must be "movie" or "tv"')
     keys = request_keys()["tmdb"]
     if not keys:
         return error('Movie database is not configured', 503)
-    results = tmdb.trending(keys)
+    results = tmdb.trending(keys, kind)
     upsert_movies(results)
     return jsonify(results)
 
 
-@app_views.route('/movies/<int:tmdb_id>/trailers', methods=['GET'])
+@app_views.route('/movies/<int(signed=True):tmdb_id>/trailers',
+                 methods=['GET'])
 @limiter.limit("60 per minute")
 def movie_trailers(tmdb_id):
     """YouTube trailers and teasers, best first (cached for a day).
@@ -60,7 +64,8 @@ def movie_trailers(tmdb_id):
     return jsonify(found)
 
 
-@app_views.route('/movies/<int:tmdb_id>/extras', methods=['GET'])
+@app_views.route('/movies/<int(signed=True):tmdb_id>/extras',
+                 methods=['GET'])
 @limiter.limit("60 per minute")
 def movie_extras(tmdb_id):
     """Where to watch in ?region=XX (ISO 3166-1, default US), the top

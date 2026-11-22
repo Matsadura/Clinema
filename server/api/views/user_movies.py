@@ -105,7 +105,7 @@ def _learn(user, tmdb_ids):
         return None
 
 
-@app_views.put('/<user_id>/library/<int:tmdb_id>')
+@app_views.put('/<user_id>/library/<int(signed=True):tmdb_id>')
 @owner_required
 def set_library_flags(tmdb_id, user):
     """Create/update the like/save/dislike flags for a movie in one call.
@@ -168,8 +168,8 @@ def log_interaction(user):
         return error('Invalid data')
     movie_id = data.get('movie_id')
     if isinstance(movie_id, bool) or not isinstance(movie_id, int) or \
-            movie_id <= 0:
-        return error('movie_id must be a positive integer')
+            movie_id == 0:  # series use negative ids
+        return error('movie_id must be a non-zero integer')
     event = data.get('event', 'view')
     if event != 'view':
         return error("Only 'view' events can be logged here")

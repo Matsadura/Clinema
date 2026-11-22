@@ -23,7 +23,27 @@ GENRES = {
     9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
     10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
 }
+# TV-only genres (TMDB uses a separate genre list for series)
+GENRES.update({10759: "Action & Adventure", 10762: "Kids", 10763: "News",
+               10764: "Reality", 10765: "Sci-Fi & Fantasy", 10766: "Soap",
+               10767: "Talk", 10768: "War & Politics"})
 GENRE_IDS = {name.lower(): gid for gid, name in GENRES.items()}
+# Movie genres TV lacks, mapped to the nearest TV genre (for discovery)
+TV_GENRE = {28: 10759, 12: 10759, 878: 10765, 14: 10765, 53: 9648,
+            27: 9648, 10749: 18, 36: 10768, 10752: 10768, 10402: 35}
+NOT_SERIES = {10763, 10764, 10767}  # news, reality, talk: not "series"
+
+# Series share every table and route with films. TMDB's movie and TV ids
+# overlap, so a series is stored under its negated TV id.
+KINDS = ("movie", "tv")
+
+
+def kind_of(tmdb_id):
+    return "tv" if tmdb_id < 0 else "movie"
+
+
+def _path(tmdb_id):
+    return f"/tv/{-tmdb_id}" if tmdb_id < 0 else f"/movie/{tmdb_id}"
 
 
 def _image(path, size):
@@ -44,23 +64,31 @@ def _genres(raw):
 
 
 def _director(raw):
+    """A film's director, or a series' creator."""
     crew = (raw.get("credits") or {}).get("crew") or []
     for person in crew:
         if person.get("job") == "Director" and person.get("name"):
             return person["name"]
+    for person in raw.get("created_by") or []:
+        if person.get("name"):
+            return person["name"]
     return None
 
 
-def normalize(raw):
-    """Map a TMDB movie result to Clinema's movie shape."""
-    keywords = (raw.get("keywords") or {}).get("keywords") or []
+def normalize(raw, kind=None):
+    """Map a TMDB movie or series result to Clinema's movie shape."""
+    kind = kind or raw.get("media_type") or "movie"
+    words = raw.get("keywords") or {}
+    keywords = words.get("keywords") or words.get("results") or []
     return {
-        "tmdb_id": raw["id"],
-        "title": raw.get("title") or raw.get("original_title") or "Untitled",
+        "tmdb_id": -raw["id"] if kind == "tv" else raw["id"],
+        "kind": kind,
+        "title": raw.get("title") or raw.get("name") or
+        raw.get("original_title") or raw.get("original_name") or "Untitled",
         "description": (raw.get("overview") or "")[:2000],
         "poster": _image(raw.get("poster_path"), "w500"),
         "backdrop": _image(raw.get("backdrop_path"), "w780"),
-        "year": _year(raw.get("release_date")),
+        "year": _year(raw.get("release_date") or raw.get("first_air_date")),
         "rating": round(raw.get("vote_average") or 0, 1),
         "popularity": round(raw.get("popularity") or 0, 1),
         "language": raw.get("original_language"),
@@ -95,40 +123,41 @@ def _with_keys(fn, keys, *args):
 
 
 @TTLMemo(maxsize=2048, ttl=24 * 3600)
-def _search(title, year, api_key):
+def _search(title, year, kind, api_key):
     """Return the best TMDB match for ``title`` (and ``year``) or None."""
     params = {"api_key": api_key, "query": title, "include_adult": "false",
               "page": 1}
+    year_param = "first_air_date_year" if kind == "tv" else "year"
     if year:
-        params["year"] = year
+        params[year_param] = year
     try:
-        status, body = _get("/search/movie", params, api_key)
+        status, body = _get(f"/search/{kind}", params, api_key)
         results = (body or {}).get("results") if status == 200 else None
         if not results and year:
             # Model may have the year slightly wrong; retry without it
-            params.pop("year")
-            status, body = _get("/search/movie", params, api_key)
+            params.pop(year_param)
+            status, body = _get(f"/search/{kind}", params, api_key)
             results = (body or {}).get("results") if status == 200 else None
     except requests.RequestException as exc:
         log.warning("TMDB search failed for %r: %s", title, redact(exc))
         return None
     if not results:
         return None
-    return normalize(results[0])
+    return normalize(results[0], kind)
 
 
-def search(title, year, api_key):
+def search(title, year, api_key, kind="movie"):
     """Best TMDB match for ``title``; ``api_key`` may be a candidate list."""
-    return _with_keys(_search, api_key, title, year)
+    return _with_keys(_search, api_key, title, year, kind)
 
 
 AI_FIELDS = {"personalized_reason": "why", "mood_fit": "fit",
              "tone": "tone", "country": "country"}
 
 
-def _lookup_all(items, api_key):
-    futures = [_pool.submit(_search, i["title"], i.get("year"), api_key)
-               for i in items]
+def _lookup_all(items, kind, api_key):
+    futures = [_pool.submit(_search, i["title"], i.get("year"), kind,
+                            api_key) for i in items]
     found = []
     for future in futures:
         try:
@@ -143,7 +172,7 @@ def _lookup_all(items, api_key):
     return found
 
 
-def lookup_many(items, api_key):
+def lookup_many(items, api_key, kind="movie"):
     """Resolve LLM items ({"title", "year", ...}) to movies in parallel,
     de-duplicated and in the original order. Unresolvable titles and films
     without a poster are dropped. The LLM's explanation fields are copied
@@ -151,7 +180,7 @@ def lookup_many(items, api_key):
     list of candidate keys; a rejected key falls back to the next one."""
     if not items:
         return []
-    results = _with_keys(_lookup_all, api_key, items) or []
+    results = _with_keys(_lookup_all, api_key, items, kind) or []
     movies, seen = [], set()
     for item, found in zip(items, results):
         if not found or found["tmdb_id"] in seen or not found["poster"]:
@@ -171,23 +200,25 @@ def lookup_many(items, api_key):
     return movies
 
 
-def _discover_page(genres, joiner, api_key, page=1, without=()):
+def _discover_page(genres, joiner, api_key, page=1, without=(),
+                   kind="movie"):
     params = {"api_key": api_key,
               "with_genres": joiner.join(map(str, genres)),
-              "sort_by": "popularity.desc", "vote_count.gte": 300,
+              "sort_by": "popularity.desc",
+              "vote_count.gte": 150 if kind == "tv" else 300,
               "vote_average.gte": 6.5, "include_adult": "false",
               "page": page}
     if without:
         params["without_genres"] = ",".join(map(str, without))
-    status, body = _get("/discover/movie", params, api_key)
+    status, body = _get(f"/discover/{kind}", params, api_key)
     if status != 200 or not body:
         return []
-    return [normalize(r) for r in body.get("results", [])
+    return [normalize(r, kind) for r in body.get("results", [])
             if r.get("poster_path")]
 
 
 @TTLMemo(maxsize=512, ttl=3600)
-def _discover(genre_ids, page, without, api_key):
+def _discover(genre_ids, page, without, kind, api_key):
     """Well-rated movies for a tuple of genre ids (fallback).
 
     Prefers films matching the two strongest genres together, widening to
@@ -197,11 +228,12 @@ def _discover(genre_ids, page, without, api_key):
     if not genre_ids:
         return None
     try:
-        results = _discover_page(genre_ids[:2], ",", api_key, page, without)
+        results = _discover_page(genre_ids[:2], ",", api_key, page, without,
+                                 kind)
         if len(results) < 8:
             seen = {m["tmdb_id"] for m in results}
             results += [m for m in _discover_page(genre_ids, "|", api_key,
-                                                  page, without)
+                                                  page, without, kind)
                         if m["tmdb_id"] not in seen]
     except requests.RequestException as exc:
         log.warning("TMDB discover failed: %s", redact(exc))
@@ -209,23 +241,27 @@ def _discover(genre_ids, page, without, api_key):
     return results or None
 
 
-def discover(genre_ids, api_key, page=1, without=()):
+def discover(genre_ids, api_key, page=1, without=(), kind="movie"):
     """See _discover; ``api_key`` may be a list of candidate keys."""
-    return _with_keys(_discover, api_key, tuple(genre_ids), page,
-                      tuple(without))
+    if kind == "tv":
+        genre_ids = [TV_GENRE.get(g, g) for g in genre_ids]
+        without = [TV_GENRE.get(g, g) for g in without]
+    return _with_keys(_discover, api_key, tuple(dict.fromkeys(genre_ids)),
+                      page, tuple(without), kind)
 
 
 @TTLMemo(maxsize=2048, ttl=24 * 3600)
 def _details(tmdb_id, api_key):
-    """Fetch a single movie by TMDB id, including director and keywords."""
+    """Fetch a film or series, including director/creator and keywords."""
     try:
-        status, body = _get(f"/movie/{int(tmdb_id)}",
+        status, body = _get(_path(int(tmdb_id)),
                             {"api_key": api_key,
                              "append_to_response": "credits,keywords"},
                             api_key)
     except requests.RequestException:
         return None
-    return normalize(body) if status == 200 and body else None
+    return normalize(body, kind_of(tmdb_id)) \
+        if status == 200 and body else None
 
 
 def details(tmdb_id, api_key):
@@ -238,39 +274,41 @@ def _search_many(query, api_key):
     params = {"api_key": api_key, "query": query, "include_adult": "false",
               "page": 1}
     try:
-        status, body = _get("/search/movie", params, api_key)
+        status, body = _get("/search/multi", params, api_key)
     except requests.RequestException as exc:
         log.warning("TMDB search failed: %s", redact(exc))
         return None
     if status != 200 or not body:
         return None
-    results = sorted(body.get("results", []),
-                     key=lambda r: r.get("popularity") or 0, reverse=True)
-    return [normalize(r) for r in results if r.get("poster_path")][:12]
+    hits = [r for r in body.get("results", [])
+            if r.get("media_type") in KINDS and r.get("poster_path")]
+    results = sorted(hits, key=lambda r: r.get("popularity") or 0,
+                     reverse=True)
+    return [normalize(r) for r in results][:12]
 
 
 def search_many(query, api_key):
-    """Up to 12 poster-bearing matches for a free-text query."""
+    """Up to 12 poster-bearing films and series for a free-text query."""
     return _with_keys(_search_many, api_key, query) or []
 
 
 @TTLMemo(maxsize=8, ttl=3600)
-def _trending(api_key):
+def _trending(kind, api_key):
     try:
-        status, body = _get("/trending/movie/week", {"api_key": api_key},
+        status, body = _get(f"/trending/{kind}/week", {"api_key": api_key},
                             api_key)
     except requests.RequestException as exc:
         log.warning("TMDB trending failed: %s", redact(exc))
         return None
     if status != 200 or not body:
         return None
-    return [normalize(r) for r in body.get("results", [])
+    return [normalize(r, kind) for r in body.get("results", [])
             if r.get("poster_path") and r.get("backdrop_path")][:20]
 
 
-def trending(api_key):
-    """This week's trending films (with posters and backdrops)."""
-    return _with_keys(_trending, api_key) or []
+def trending(api_key, kind="movie"):
+    """This week's trending films or series (with posters and backdrops)."""
+    return _with_keys(_trending, api_key, kind) or []
 
 
 _VIDEO_TYPES = {"Trailer": 0, "Teaser": 1}
@@ -293,14 +331,14 @@ def _youtube_trailers(results):
 def _trailers(tmdb_id, api_key):
     """YouTube trailers and teasers, English first, then any language."""
     try:
-        status, body = _get(f"/movie/{int(tmdb_id)}/videos",
+        status, body = _get(f"{_path(int(tmdb_id))}/videos",
                             {"api_key": api_key,
                              "include_video_language": "en,null"}, api_key)
         if status != 200 or body is None:
             return None
         found = _youtube_trailers(body.get("results") or [])
         if not found:  # e.g. a film only trailed in its original language
-            status, body = _get(f"/movie/{int(tmdb_id)}/videos",
+            status, body = _get(f"{_path(int(tmdb_id))}/videos",
                                 {"api_key": api_key}, api_key)
             if status == 200 and body:
                 found = _youtube_trailers(body.get("results") or [])
@@ -362,7 +400,7 @@ def _cast(raw, limit=12):
 def _extras(tmdb_id, region, api_key):
     try:
         status, body = _get(
-            f"/movie/{int(tmdb_id)}",
+            _path(int(tmdb_id)),
             {"api_key": api_key,
              "append_to_response": "credits,recommendations,similar,"
                                    "watch/providers"}, api_key)
@@ -371,12 +409,13 @@ def _extras(tmdb_id, region, api_key):
         return None
     if status != 200 or not body:
         return None
-    related = [normalize(r) for r in
+    kind = kind_of(tmdb_id)
+    related = [normalize(r, kind) for r in
                (body.get("recommendations") or {}).get("results") or []
                if r.get("poster_path")]
     if len(related) < 6:  # thin recommendations: pad with "similar"
         ids = {m["tmdb_id"] for m in related}
-        related += [normalize(r) for r in
+        related += [normalize(r, kind) for r in
                     (body.get("similar") or {}).get("results") or []
                     if r.get("poster_path") and r["id"] not in ids]
     return {"tmdb_id": int(tmdb_id),
@@ -395,23 +434,28 @@ def _person(person_id, api_key):
     try:
         status, body = _get(f"/person/{int(person_id)}",
                             {"api_key": api_key,
-                             "append_to_response": "movie_credits"}, api_key)
+                             "append_to_response": "combined_credits"},
+                            api_key)
     except requests.RequestException as exc:
         log.warning("TMDB person failed: %s", redact(exc))
         return None
     if status != 200 or not body:
         return None
-    credits = body.get("movie_credits") or {}
-    roles = {}
+    credits = body.get("combined_credits") or {}
+    roles = {}  # (media type, id) -> (credit, role)
     for c in credits.get("cast") or []:
-        roles.setdefault(c["id"], (c, c.get("character") or None))
+        roles.setdefault((c.get("media_type"), c["id"]),
+                         (c, c.get("character") or None))
     for c in credits.get("crew") or []:
-        if c.get("job") == "Director":
-            roles[c["id"]] = (roles.get(c["id"], (c,))[0], "Director")
+        if c.get("job") in ("Director", "Creator"):
+            key = (c.get("media_type"), c["id"])
+            roles[key] = (roles.get(key, (c,))[0], c["job"])
     movies = []
     for raw, role in roles.values():
-        if not raw.get("poster_path") or raw.get("adult"):
-            continue
+        if raw.get("media_type") not in KINDS or not raw.get("poster_path") \
+                or raw.get("adult") or NOT_SERIES & set(raw.get("genre_ids")
+                                                        or []):
+            continue  # talk shows and news appearances aren't credits
         movies.append(dict(normalize(raw), role=(role or "")[:80] or None))
     movies.sort(key=lambda m: m["popularity"], reverse=True)
     return {"id": body["id"], "name": (body.get("name") or "")[:120],
@@ -425,5 +469,5 @@ def _person(person_id, api_key):
 
 
 def person(person_id, api_key):
-    """A cast or crew member and their best-known films."""
+    """A cast or crew member and their best-known films and series."""
     return _with_keys(_person, api_key, person_id)

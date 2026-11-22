@@ -79,6 +79,7 @@ class Movie(BaseModel, Base):
         data = super().to_dict()
         for field in LIST_FIELDS:
             data[field] = split_list(data.get(field))
+        data['kind'] = 'tv' if self.tmdb_id < 0 else 'movie'  # see tmdb.py
         return data
 
 
