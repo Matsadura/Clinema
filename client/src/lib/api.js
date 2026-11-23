@@ -7,6 +7,8 @@ export const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, 
 const DEFAULT_TIMEOUT = 15_000;
 // The AI pipeline (LLM + TMDB lookups) can take a while.
 export const SUGGESTION_TIMEOUT = 45_000;
+// Films per history page; a shorter page is the last one.
+export const HISTORY_PAGE = 30;
 
 export class ApiError extends Error {
   constructor(message, { status = 0, code = 'error' } = {}) {
@@ -124,7 +126,8 @@ export const api = {
     request(`/movies/${encodeURIComponent(tmdbId)}/extras?region=${encodeURIComponent(region)}`, opts),
   person: (personId, opts) => request(`/people/${encodeURIComponent(personId)}`, opts),
   trailers: (tmdbId, opts) => request(`/movies/${encodeURIComponent(tmdbId)}/trailers`, opts),
-  history: (userId, opts) => request(`/${encodeURIComponent(userId)}/history`, { auth: true, ...opts }),
+  history: (userId, { offset = 0, limit = HISTORY_PAGE, ...opts } = {}) =>
+    request(`/${encodeURIComponent(userId)}/history?limit=${limit}&offset=${offset}`, { auth: true, ...opts }),
 
   watchlistShare: (userId, opts) => request(`/${encodeURIComponent(userId)}/watchlist/share`, { auth: true, ...opts }),
   setWatchlistShare: (userId, body) =>

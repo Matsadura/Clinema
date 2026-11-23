@@ -136,4 +136,26 @@ describe('History', () => {
     expect(screen.getByText('Heat').closest('section')).not.toBe(today);
     expect(screen.getByText('Recommended')).toBeInTheDocument();
   });
+  it('loads older activity a page at a time', async () => {
+    window.localStorage.setItem('_token', 't');
+    const at = new Date().toISOString();
+    const entry = (id) => ({ movie_id: id, movie: { tmdb_id: id, title: `Film ${id}` }, last_event: 'view', last_at: at, events: ['view'], moods: [] });
+    const mock = routeFetch({
+      '/api/auth_validate': user,
+      '/api/u1/library': [],
+      '/api/u1/history': (path) =>
+        path.includes('offset=0') ? Array.from({ length: 30 }, (_, i) => entry(i + 1)) : [entry(30), entry(31)],
+    });
+    renderApp('/history');
+
+    await screen.findByText('Film 30');
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(await screen.findByText('Film 31')).toBeInTheDocument();
+    expect(screen.getAllByText('Film 30')).toHaveLength(1); // no duplicate row
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(callsTo(mock, '/api/u1/history').map(([url]) => url)).toEqual([
+      '/api/u1/history?limit=30&offset=0',
+      '/api/u1/history?limit=30&offset=30',
+    ]);
+  });
 });

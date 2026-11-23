@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api.js';
+import { api, HISTORY_PAGE } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMovieDrawer } from '../context/MovieDrawerContext.jsx';
 import { Rating, PosterFallback } from '../components/MovieCard.jsx';
-import { Alert, EmptyState, Skeleton, textLink } from '../components/ui.jsx';
+import { Alert, Button, EmptyState, Skeleton, textLink } from '../components/ui.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 const EVENT_LABELS = {
@@ -67,19 +67,28 @@ function Row({ entry }) {
 export default function HistoryPage() {
   useDocumentTitle('History');
   const { user } = useAuth();
-  const [state, setState] = useState({ status: 'loading', entries: [], error: null });
+  const [state, setState] = useState({ status: 'loading', entries: [], error: null, more: false });
   const [attempt, setAttempt] = useState(0);
+  const [offset, setOffset] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setState((s) => ({ ...s, status: 'loading' }));
     api
-      .history(user.id, { signal: controller.signal })
-      .then((entries) => setState({ status: 'ready', entries, error: null }))
-      .catch((err) => err.code !== 'aborted' && setState({ status: 'error', entries: [], error: err.message }));
+      .history(user.id, { offset, signal: controller.signal })
+      .then((page) =>
+        setState((s) => {
+          // New activity can shift a film onto the next page: keep one row per film
+          const known = new Set(s.entries.map((e) => e.movie_id));
+          const entries = offset ? [...s.entries, ...page.filter((e) => !known.has(e.movie_id))] : page;
+          return { status: 'ready', entries, error: null, more: page.length === HISTORY_PAGE, next: offset + page.length };
+        }),
+      )
+      .catch((err) => err.code !== 'aborted' && setState((s) => ({ ...s, status: 'error', error: err.message })));
     return () => controller.abort();
-  }, [user.id, attempt]);
+  }, [user.id, attempt, offset]);
 
+  const first = offset === 0;
   const groups = [];
   for (const entry of state.entries) {
     const label = dayLabel(new Date(entry.last_at));
@@ -93,17 +102,12 @@ export default function HistoryPage() {
       <p className="mt-2 text-muted">Films you&apos;ve been shown, opened or reacted to — the signals behind your taste profile.</p>
 
       <div className="mt-10">
-        {state.status === 'loading' && (
+        {state.status === 'loading' && first && (
           <div className="space-y-3" aria-busy="true" aria-label="Loading history">
             {Array.from({ length: 5 }, (_, i) => (
               <Skeleton key={i} className="h-[72px] w-full" />
             ))}
           </div>
-        )}
-        {state.status === 'error' && (
-          <Alert title="Couldn't load your history." onRetry={() => setAttempt((n) => n + 1)}>
-            {state.error}
-          </Alert>
         )}
         {state.status === 'ready' && !groups.length && (
           <EmptyState
@@ -127,6 +131,18 @@ export default function HistoryPage() {
             </ul>
           </section>
         ))}
+        {state.status === 'error' && (
+          <Alert title="Couldn't load your history." onRetry={() => setAttempt((n) => n + 1)}>
+            {state.error}
+          </Alert>
+        )}
+        {state.more && state.status !== 'error' && (
+          <div className="mb-8 flex justify-center">
+            <Button variant="secondary" loading={state.status === 'loading'} onClick={() => setOffset(state.next)}>
+              Show more
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

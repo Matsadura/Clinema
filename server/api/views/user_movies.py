@@ -14,6 +14,7 @@ Routes:
     - GET    /<user_id>/taste                    Learned taste profile
 """
 from flask import current_app, jsonify, request
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from api.services import taste, tmdb
@@ -186,29 +187,36 @@ HISTORY_EVENTS = ('recommended', 'view', 'like', 'dislike', 'save', 'seen')
 @app_views.get('/<user_id>/history')
 @owner_required
 def history(user):
-    """Recent activity, one entry per film (newest first).
+    """Recent activity, one entry per film (newest first), a page at a time.
 
     Each entry: {movie_id, movie, last_event, last_at, events: [...],
     moods: [...]} where ``moods`` are those the film was recommended for.
-    Query: ?limit=1..100 (default 60).
+    Query: ?limit=1..100 (default 30) &offset=0.. (films to skip). A page
+    shorter than ``limit`` is the last one.
     """
     import json
 
     try:
-        limit = min(max(int(request.args.get('limit', 60)), 1), 100)
+        limit = min(max(int(request.args.get('limit', 30)), 1), 100)
+        offset = max(int(request.args.get('offset', 0)), 0)
     except ValueError:
-        return error('limit must be an integer')
+        return error('limit and offset must be integers')
+    mine = (Interaction.user_id == user.id,
+            Interaction.event.in_(HISTORY_EVENTS))
+    last_at = func.max(Interaction.created_at)
+    page = [movie_id for movie_id, _ in storage.session.query(
+        Interaction.movie_id, last_at).filter(*mine)
+        .group_by(Interaction.movie_id)
+        .order_by(last_at.desc(), Interaction.movie_id.desc())
+        .offset(offset).limit(limit)]
     rows = storage.session.query(Interaction).filter(
-        Interaction.user_id == user.id,
-        Interaction.event.in_(HISTORY_EVENTS),
-    ).order_by(Interaction.created_at.desc()).limit(1000).all()
+        *mine, Interaction.movie_id.in_(page)
+    ).order_by(Interaction.created_at.desc()).all() if page else []
 
-    grouped = {}
+    grouped = {movie_id: None for movie_id in page}  # keeps page order
     for row in rows:
-        entry = grouped.get(row.movie_id)
+        entry = grouped[row.movie_id]
         if entry is None:
-            if len(grouped) >= limit:
-                continue
             entry = grouped[row.movie_id] = {
                 'movie_id': row.movie_id, 'last_event': row.event,
                 'last_at': row.created_at.isoformat() + 'Z',

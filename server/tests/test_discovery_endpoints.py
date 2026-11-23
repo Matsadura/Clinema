@@ -134,6 +134,25 @@ def test_history_groups_activity_per_film(client, app):
                       headers=h).status_code == 400
 
 
+def test_history_pages_through_films(client):
+    uid, h = register_and_login(client)
+    for movie_id in (1, 2, 3):
+        for event in ("recommended", "view"):
+            storage.new(Interaction(user_id=uid, movie_id=movie_id,
+                                    event=event, weight=0))
+            storage.save()
+
+    def page(query):
+        return [d["movie_id"] for d in client.get(
+            f"/api/{uid}/history?{query}", headers=h).get_json()]
+
+    # Each film appears once, on exactly one page, newest first
+    assert page("limit=2") + page("limit=2&offset=2") == [3, 2, 1]
+    assert page("limit=2&offset=3") == []
+    assert client.get(f"/api/{uid}/history?offset=x",
+                      headers=h).status_code == 400
+
+
 def test_history_is_private(client):
     _, h = register_and_login(client)
     other, _ = register_and_login(client, email="bob@example.com")
