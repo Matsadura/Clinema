@@ -92,6 +92,28 @@ Schedule it nightly (`crontab -e`):
 Backups on the same disk don't survive losing the server: now and then copy
 them elsewhere, e.g. `scp -r ubuntu@SERVER:clinema-backups ./`.
 
+### Off-server copy on GitHub
+
+[`deploy/backup-to-github.sh`](deploy/backup-to-github.sh) commits a plain-text
+dump (one row per line) to a **private** repository, so each backup is a small
+diff and the commit history is the archive. The server pushes with a deploy
+key that can write to that one repository only:
+
+```bash
+ssh-keygen -t ed25519 -N "" -C clinema-server-backups -f ~/.ssh/clinema_backups
+printf 'Host github-backups\n  HostName github.com\n  User git\n  IdentityFile ~/.ssh/clinema_backups\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+```
+
+Create the private repo, add `~/.ssh/clinema_backups.pub` under its
+Settings → Deploy keys with **write access**, then schedule it (`crontab -e`):
+
+```
+45 */6 * * * cd ~/Clinema && deploy/backup-to-github.sh >> ~/clinema-backups/github.log 2>&1
+```
+
+To restore an older version, `git log` in a clone of that repo, then
+`git show <commit>:clinema.sql` piped into the `mysql` command below.
+
 Restore into the running stack:
 
 ```bash
